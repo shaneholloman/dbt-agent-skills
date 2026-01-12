@@ -1,10 +1,19 @@
-# Agent Skills for dbt - Development Guide for AI Assistants
+# dbt Skills Repository
 
-This repository contains [Agent Skills](https://agentskills.io/home) specifically for working with dbt. When creating or modifying skills in this repository, follow these guidelines to ensure compliance with the Agent Skills specification.
+This repository contains skills for AI agents working with dbt projects.
 
-## Using the Agent Skills MCP Server
+## Creating and Modifying Skills
 
-**IMPORTANT**: When creating or editing skills, use the Agent Skills MCP server to validate that your work conforms to the specification. This ensures skills will work correctly with skills-compatible AI agents.
+This repo uses the [superpowers](https://github.com/obra/superpowers) skill framework. When creating or modifying skills:
+
+1. **Use the superpowers:writing-skills skill** - It provides TDD-based methodology for skill creation including pressure testing
+2. **Follow the Iron Rule** - Test skills with pressure scenarios before deploying
+
+The superpowers marketplace is configured in `.claude/settings.json` and will be auto-installed when you trust this repo.
+
+## Using the skills-ref Validation Tool
+
+**IMPORTANT**: When creating or editing skills, validate that your work conforms to the Agent Skills specification.
 
 ### Validation Workflow
 
@@ -21,16 +30,34 @@ This repository contains [Agent Skills](https://agentskills.io/home) specificall
    skills-ref validate path/to/skill
    ```
 
-## Agent Skills Specification Requirements
+### Quick Reference
 
-### Frontmatter Format
+```bash
+# Setup (one-time)
+uv sync
+source .venv/bin/activate
 
-Every `SKILL.md` file MUST have frontmatter with these exact requirements:
+# Validate skill
+skills-ref validate path/to/skill
+
+# Read properties
+skills-ref read-properties path/to/skill
+
+# Generate prompt
+skills-ref to-prompt path/to/skill
+
+# Deactivate venv when done
+deactivate
+```
+
+## Skill Requirements
+
+Every `SKILL.md` must have valid frontmatter:
 
 ```yaml
 ---
 name: skill-name-in-lowercase
-description: Brief one-sentence description
+description: Brief one-sentence description starting with "Use when..."
 ---
 ```
 
@@ -40,85 +67,18 @@ description: Brief one-sentence description
 - Only allowed fields: `name`, `description`, `allowed-tools`, `compatibility`, `license`, `metadata`
 - NO `version`, `author`, or `tags` fields (these will cause validation errors)
 
-### Directory Structure
-
-Skills should be organized by category:
-
-```
-dbt-commands/
-├── run-incremental-models/
-│   └── SKILL.md
-├── test-with-selectors/
-│   └── SKILL.md
-└── build-models/
-    └── SKILL.md
-```
-
-### Skill Content
-
-After the frontmatter, include:
-
-1. **Clear title and purpose**: What this skill does and when to use it
-2. **Prerequisites**: Required setup (dbt installation, project structure, etc.)
-3. **Instructions**: Step-by-step commands and explanations
-4. **Examples**: Real-world scenarios with actual dbt commands
-5. **Common issues**: Troubleshooting guidance
-6. **Related commands**: Links to related skills or dbt commands
-
-## dbt-Specific Guidelines
-
-When creating dbt skills:
-
-- Use actual dbt CLI syntax (e.g., `dbt run --select model_name`)
-- Include relevant flags (`--select`, `--exclude`, `--full-refresh`, `--state`, etc.)
-- Explain selector syntax when using graph operators (`+`, `@`, etc.)
-- Warn about destructive operations (full refresh, etc.)
-- Reference official dbt documentation when appropriate
-- Include both simple and complex examples
-- Consider different dbt versions if features are version-specific
-
-### Example Commands
-
-```bash
-# Good: Clear, specific, with context
-dbt run --select config.materialized:incremental --full-refresh
-
-# Good: With comments explaining the selector
-# Run changed models and their downstream dependencies
-dbt run --select state:modified+ --state ./target
-```
-
-## Before Submitting
-
-1. ✅ **Validate the skill** using the skills-ref tool
-2. ✅ **Test commands** in an actual dbt project
-3. ✅ **Check naming**: Skill name matches directory, lowercase with hyphens only
-4. ✅ **Verify frontmatter**: Only allowed fields, no extra metadata
-5. ✅ **Review examples**: All commands use correct dbt syntax
-6. ✅ **Check links**: References to dbt docs are accurate
-
 ## Common Validation Errors
 
-❌ **"Unexpected fields in frontmatter"**
-- Remove `version`, `author`, `tags` or other non-allowed fields
-- Only use: `name`, `description`, `allowed-tools`, `compatibility`, `license`, `metadata`
+| Error | Fix |
+|-------|-----|
+| "Unexpected fields in frontmatter" | Remove `version`, `author`, `tags` or other non-allowed fields |
+| "Skill name must be lowercase" | Change `Run Incremental Models` to `run-incremental-models` |
+| "Directory name must match skill name" | If skill name is `run-models`, directory must be `run-models/` |
+| "Contains invalid characters" | Use only lowercase letters, digits, and hyphens in skill name |
 
-❌ **"Skill name must be lowercase"**
-- Change `Run Incremental Models` to `run-incremental-models`
+## Before Committing
 
-❌ **"Directory name must match skill name"**
-- If skill name is `run-models`, directory must be `run-models/`
-
-❌ **"Contains invalid characters"**
-- Use only lowercase letters, digits, and hyphens in skill name
-- No spaces, underscores, or special characters
-
-## Resources
-
-- [Agent Skills Specification](https://agentskills.io/specification)
-- [dbt CLI Reference](https://docs.getdbt.com/reference/dbt-commands)
-- [Contributing Guide](CONTRIBUTING.md)
-
-## Remember
-
-Always use the Agent Skills MCP server or validation tools before committing. This ensures your skills will work correctly with all skills-compatible AI agents and maintains the quality of this repository.
+1. Validate the skill using `skills-ref validate`
+2. Test with pressure scenarios using superpowers:writing-skills methodology
+3. Check naming: Skill name matches directory, lowercase with hyphens only
+4. Verify frontmatter: Only allowed fields, no extra metadata
