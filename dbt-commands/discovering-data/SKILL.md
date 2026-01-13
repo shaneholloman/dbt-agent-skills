@@ -74,7 +74,7 @@ Review `models/staging/` for existing `_sources.yml` files to understand what's 
 Preview rows from each source table:
 
 ```bash
-dbt show --inline "SELECT * FROM {{ source('source_name', 'table_name') }} LIMIT 20"
+dbt show --inline "SELECT * FROM {{ source('source_name', 'table_name') }} LIMIT 20" --output json
 ```
 
 **Document immediately:**
@@ -93,7 +93,7 @@ SELECT
   COUNT(*) as total_rows,
   COUNT(DISTINCT id_column) as distinct_ids
 FROM {{ source('source_name', 'table_name') }}
-"
+" --output json
 ```
 
 **Grain indicators:**
@@ -113,7 +113,7 @@ FROM {{ source('source_name', 'table_name') }}
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 20
-"
+" --output json
 
 # Null analysis
 dbt show --inline "
@@ -122,7 +122,7 @@ SELECT
   COUNT(column_name) as non_null,
   COUNT(*) - COUNT(column_name) as null_count
 FROM {{ source('source_name', 'table_name') }}
-"
+" --output json
 ```
 
 **Data nuances to document:**
@@ -143,7 +143,7 @@ FROM {{ source('source_name', 'child_table') }} c
 LEFT JOIN {{ source('source_name', 'parent_table') }} p
   ON c.parent_id = p.id
 WHERE p.id IS NULL
-"
+" --output json
 ```
 
 **Relationship types to identify:**
@@ -163,7 +163,7 @@ FROM {{ source('source_name', 'table_name') }}
 GROUP BY 1
 HAVING COUNT(*) > 1
 LIMIT 10
-"
+" --output json
 
 # Mixed data in columns
 dbt show --inline "
@@ -174,7 +174,7 @@ SELECT DISTINCT
     ELSE 'string'
   END as detected_type
 FROM {{ source('source_name', 'table_name') }}
-"
+" --output json
 ```
 
 ## Documenting Findings
@@ -217,10 +217,10 @@ Create a discovery report that other agents can consume. Place in `docs/data_dis
 | Task | Command |
 |------|---------|
 | List sources | `dbt ls --resource-type source` |
-| Preview data | `dbt show --inline "SELECT * FROM {{ source(...) }} LIMIT 20"` |
-| Count rows | `dbt show --inline "SELECT COUNT(*) FROM {{ source(...) }}"` |
-| Check uniqueness | `dbt show --inline "SELECT col, COUNT(*) FROM ... GROUP BY 1 HAVING COUNT(*) > 1"` |
-| Test FK relationship | `dbt show --inline "SELECT COUNT(*) FROM child LEFT JOIN parent ON ... WHERE parent.id IS NULL"` |
+| Preview data | `dbt show --inline "SELECT * FROM {{ source(...) }} LIMIT 20 --output json"` |
+| Count rows | `dbt show --inline "SELECT COUNT(*) FROM {{ source(...) }} --output json"` |
+| Check uniqueness | `dbt show --inline "SELECT col, COUNT(*) FROM ... GROUP BY 1 HAVING COUNT(*) > 1 --output json"` |
+| Test FK relationship | `dbt show --inline "SELECT COUNT(*) FROM child LEFT JOIN parent ON ... WHERE parent.id IS NULL --output json"` |
 
 ## Common Mistakes
 
