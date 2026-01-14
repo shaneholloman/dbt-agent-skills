@@ -110,6 +110,18 @@ Example request:
 ### For Code/Compilation Errors
 
 1. **Check git history for recent changes:**
+
+   If you're not in the dbt project directory, use the dbt MCP server to find the repository:
+   ```
+   # Get project details including repository URL
+   get_project_details(project_id=<project_id>)
+   ```
+
+   Then either:
+   - Query the repository directly using `gh` CLI if it's on GitHub
+   - Clone to a temporary folder: `git clone <repo_url> /tmp/dbt-investigation`
+
+   Once in the project directory:
    ```bash
    git log --oneline -20
    git diff HEAD~5..HEAD -- models/ macros/
