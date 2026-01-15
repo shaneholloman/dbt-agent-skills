@@ -106,7 +106,23 @@ def grade(run_id: str = typer.Argument(..., help="Run ID (timestamp directory na
 @app.command()
 def report(run_id: str = typer.Argument(..., help="Run ID (timestamp directory name)")) -> None:
     """Generate comparison report for a run."""
-    print("report command - not implemented yet")
+    from skill_eval.reporter import generate_report, save_report
+
+    evals_dir = Path.cwd() / "evals"
+    run_dir = evals_dir / "runs" / run_id
+
+    if not run_dir.exists():
+        print(f"Error: Run not found: {run_id}")
+        raise typer.Exit(1)
+
+    reports_dir = evals_dir / "reports"
+    reports_dir.mkdir(exist_ok=True)
+
+    report_file = save_report(run_dir, reports_dir)
+    report_content = generate_report(run_dir)
+
+    print(report_content)
+    print(f"\nSaved to: {report_file}")
 
 
 if __name__ == "__main__":
