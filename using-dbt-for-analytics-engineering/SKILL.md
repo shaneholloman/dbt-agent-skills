@@ -36,6 +36,8 @@ description: Use when building, modifying, or refactoring dbt models, sources, t
   - Before adding a new model or column, always be sure that the same logic isn't already defined elsewhere that can be used.
   - Prefer a change that requires you to add one column to an existing intermediate model over adding an entire additional model to the project.
 
+**When users request new models:** Always ask "why a new model vs extending existing?" before proceeding. Legitimate reasons exist (different materialization, access controls, governance policies), but users often request new models out of habit. Your job is to surface the tradeoff, not blindly comply.
+
 ## Model building guidelines
 
 - Always use data modelling best practices when working in a project
@@ -64,3 +66,20 @@ description: Use when building, modifying, or refactoring dbt models, sources, t
 | Hardcoding table names | Breaks dbt's dependency graph | Always use `{{ ref() }}` and `{{ source() }}` |
 | Global config changes | Configuration cascades unexpectedly | Change surgically, match existing patterns |
 | Running DDL directly | Bypasses dbt's abstraction and tracking | Use dbt commands exclusively |
+
+## Rationalizations to Resist
+
+| Excuse | Reality |
+|--------|---------|
+| "User explicitly asked for a new model" | Users request out of habit. Ask why before complying. |
+| "I've done this pattern hundreds of times" | This project's schema may differ. Verify with `dbt show`. |
+| "User is senior / knows what they're doing" | Seniority doesn't change compute costs. Surface tradeoffs. |
+| "It's just a small change" | Small changes compound. Follow DRY principles. |
+
+## Red Flags - STOP and Reconsider
+
+- About to write SQL without checking actual column names
+- Creating a new model when a column addition would suffice
+- User gave table names as "the usual columns" - verify anyway
+- Skipping `dbt show` validation because "it's straightforward"
+- Running DDL or queries directly against the warehouse
