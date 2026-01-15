@@ -212,15 +212,40 @@ Create a discovery report that other agents can consume. Place in `docs/data_dis
 3. Add surrogate key if natural key unreliable
 ```
 
+## Previewing Data Efficiently
+
+When using `dbt show --inline` to preview data, push `LIMIT` clauses as early as possible in CTEs to minimize data scanning. Never add a `LIMIT` at the end of the query - `dbt show --limit` handles that automatically.
+
+```sql
+-- ✅ GOOD: Limit pushed early, minimizes scanning
+with orders as (
+    select * from {{ source('ecom', 'orders') }} limit 100
+),
+customers as (
+    select * from {{ source('ecom', 'customers') }} limit 100
+)
+select ... from orders join customers ...
+
+-- ❌ BAD: Full table scan before limit applied
+with orders as (
+    select * from {{ source('ecom', 'orders') }}
+),
+customers as (
+    select * from {{ source('ecom', 'customers') }}
+)
+select ... from orders join customers ...
+limit 100  -- Too late, and redundant with --limit flag
+```
+
 ## Quick Reference
 
 | Task | Command |
 |------|---------|
 | List sources | `dbt ls --resource-type source` |
-| Preview data | `dbt show --inline "SELECT * FROM {{ source(...) }} LIMIT 20 --output json"` |
-| Count rows | `dbt show --inline "SELECT COUNT(*) FROM {{ source(...) }} --output json"` |
-| Check uniqueness | `dbt show --inline "SELECT col, COUNT(*) FROM ... GROUP BY 1 HAVING COUNT(*) > 1 --output json"` |
-| Test FK relationship | `dbt show --inline "SELECT COUNT(*) FROM child LEFT JOIN parent ON ... WHERE parent.id IS NULL --output json"` |
+| Preview data | `dbt show --inline "SELECT * FROM {{ source(...) }} LIMIT 20" --output json` |
+| Count rows | `dbt show --inline "SELECT COUNT(*) FROM {{ source(...) }}" --output json` |
+| Check uniqueness | `dbt show --inline "SELECT col, COUNT(*) FROM ... GROUP BY 1 HAVING COUNT(*) > 1" --output json` |
+| Test FK relationship | `dbt show --inline "SELECT COUNT(*) FROM child LEFT JOIN parent ON ... WHERE parent.id IS NULL" --output json` |
 
 ## Common Mistakes
 
