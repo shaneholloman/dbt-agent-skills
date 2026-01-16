@@ -8,51 +8,6 @@
   },
   "plugins": [
     {
-      "name": "debugging-dbt-errors",
-      "description": "Work out the root cause of a dbt project's error, e.g. parsing, compilation, or database errors.",
-      "author": {
-        "name": "dbt Labs"
-      },
-      "source": "./dbt-commands/debugging-dbt-errors",
-      "category": "analytics"
-    },
-    {
-      "name": "discovering-data",
-      "description": "Use when exploring unfamiliar data sources, onboarding to a new dbt project, or investigating data quality issues before building models",
-      "author": {
-        "name": "dbt Labs"
-      },
-      "source": "./dbt-commands/discovering-data",
-      "category": "analytics"
-    },
-    {
-      "name": "evaluating-impact-of-a-dbt-model-change",
-      "description": "Use when modifying an existing dbt model's SQL logic, schema, or columns to understand downstream effects before making changes",
-      "author": {
-        "name": "dbt Labs"
-      },
-      "source": "./dbt-commands/evaluating-impact-of-a-dbt-model-change",
-      "category": "analytics"
-    },
-    {
-      "name": "planning-dbt-models",
-      "description": "Plan dbt models by working backwards from the desired output to understand required data structures and transformations",
-      "author": {
-        "name": "dbt Labs"
-      },
-      "source": "./dbt-commands/planning-dbt-models",
-      "category": "analytics"
-    },
-    {
-      "name": "writing-data-tests",
-      "description": "Use when adding dbt tests to models, after data discovery is complete, or when reviewing test coverage for warehouse cost optimization",
-      "author": {
-        "name": "dbt Labs"
-      },
-      "source": "./dbt-commands/writing-data-tests",
-      "category": "analytics"
-    },
-    {
       "name": "fetching-dbt-docs",
       "description": "Use when fetching dbt documentation, looking up dbt features, or answering questions about dbt Cloud, dbt Core, or the dbt Semantic Layer",
       "author": {
@@ -99,7 +54,7 @@
     },
     {
       "name": "using-dbt-for-analytics-engineering",
-      "description": "Use when building, modifying, or refactoring dbt models, sources, tests, or project configuration. Use when asked to create analytics pipelines, transform warehouse data, or implement data modeling best practices.",
+      "description": "Use when doing any dbt work - building or modifying models, debugging errors, exploring unfamiliar data sources, writing tests, or evaluating impact of changes. Use for analytics pipelines, data transformations, and data modeling.",
       "author": {
         "name": "dbt Labs"
       },
