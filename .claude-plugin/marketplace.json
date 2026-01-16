@@ -8,79 +8,101 @@
   },
   "plugins": [
     {
-      "name": "discovering-data",
-      "description": "Use when exploring unfamiliar data sources, onboarding to a new dbt project, or investigating data quality issues before building models",
-      "author": { "name": "dbt Labs" },
-      "source": "./dbt-commands/discovering-data",
+      "name": "debugging-dbt-errors",
+      "description": "Work out the root cause of a dbt project's error, e.g. parsing, compilation, or database errors.",
+      "author": {
+        "name": "dbt Labs"
+      },
+      "source": "./dbt-commands/debugging-dbt-errors",
       "category": "analytics"
     },
     {
-      "name": "debugging-dbt-errors",
-      "description": "Work out the root cause of a dbt project's error, e.g. parsing, compilation, or database errors",
-      "author": { "name": "dbt Labs" },
-      "source": "./dbt-commands/debugging-dbt-errors",
+      "name": "discovering-data",
+      "description": "Use when exploring unfamiliar data sources, onboarding to a new dbt project, or investigating data quality issues before building models",
+      "author": {
+        "name": "dbt Labs"
+      },
+      "source": "./dbt-commands/discovering-data",
       "category": "analytics"
     },
     {
       "name": "evaluating-impact-of-a-dbt-model-change",
       "description": "Use when modifying an existing dbt model's SQL logic, schema, or columns to understand downstream effects before making changes",
-      "author": { "name": "dbt Labs" },
+      "author": {
+        "name": "dbt Labs"
+      },
       "source": "./dbt-commands/evaluating-impact-of-a-dbt-model-change",
       "category": "analytics"
     },
     {
       "name": "planning-dbt-models",
       "description": "Plan dbt models by working backwards from the desired output to understand required data structures and transformations",
-      "author": { "name": "dbt Labs" },
+      "author": {
+        "name": "dbt Labs"
+      },
       "source": "./dbt-commands/planning-dbt-models",
       "category": "analytics"
     },
     {
       "name": "writing-data-tests",
       "description": "Use when adding dbt tests to models, after data discovery is complete, or when reviewing test coverage for warehouse cost optimization",
-      "author": { "name": "dbt Labs" },
+      "author": {
+        "name": "dbt Labs"
+      },
       "source": "./dbt-commands/writing-data-tests",
       "category": "analytics"
     },
     {
       "name": "fetching-dbt-docs",
       "description": "Use when fetching dbt documentation, looking up dbt features, or answering questions about dbt Cloud, dbt Core, or the dbt Semantic Layer",
-      "author": { "name": "dbt Labs" },
+      "author": {
+        "name": "dbt Labs"
+      },
       "source": "./dbt-docs/fetching-dbt-docs",
       "category": "documentation"
     },
     {
       "name": "configuring-dbt-mcp-server",
       "description": "Use when user wants to set up, configure, or troubleshoot the dbt MCP server for AI tools like Claude Desktop, Claude Code, Cursor, or VS Code",
-      "author": { "name": "dbt Labs" },
+      "author": {
+        "name": "dbt Labs"
+      },
       "source": "./dbt-mcp-server/configuring-dbt-mcp-server",
       "category": "integration"
     },
     {
       "name": "troubleshooting-dbt-job-errors",
       "description": "Use when a dbt Cloud job fails and you need to diagnose the root cause, especially when error messages are unclear or when intermittent failures occur",
-      "author": { "name": "dbt Labs" },
+      "author": {
+        "name": "dbt Labs"
+      },
       "source": "./dbt-operations/troubleshooting-dbt-job-errors",
       "category": "operations"
     },
     {
       "name": "adding-time-spine-metricflow-semantic-layer",
       "description": "Use when setting up a dbt project for the semantic layer and time-based metrics are needed, when MetricFlow queries fail due to missing time spine, or when adding time dimensions to semantic models",
-      "author": { "name": "dbt Labs" },
+      "author": {
+        "name": "dbt Labs"
+      },
       "source": "./dbt-semantic-layer/adding-time-spine-metricflow-semantic-layer",
       "category": "semantic-layer"
     },
     {
       "name": "querying-dbt-semantic-layer",
       "description": "Use when answering business questions that could be answered by querying data, when dbt MCP tools are available",
-      "author": { "name": "dbt Labs" },
+      "author": {
+        "name": "dbt Labs"
+      },
       "source": "./dbt-semantic-layer/querying-dbt-semantic-layer",
       "category": "semantic-layer"
     },
     {
       "name": "using-dbt-for-analytics-engineering",
       "description": "Use when building, modifying, or refactoring dbt models, sources, tests, or project configuration. Use when asked to create analytics pipelines, transform warehouse data, or implement data modeling best practices.",
-      "author": { "name": "dbt Labs" },
+      "author": {
+        "name": "dbt Labs"
+      },
       "source": "./using-dbt-for-analytics-engineering",
       "category": "analytics"
     }
