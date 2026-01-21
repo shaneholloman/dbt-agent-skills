@@ -7,7 +7,7 @@ description: Use when adding unit tests for a dbt model
 
 ## What are unit tests in dbt
 
-In software programming, unit tests validate small portions of your functional code, and they work much the same way in dbt. dbt uwnit tests allow you to validate your SQL modeling logic on a small set of static inputs _before_ you materialize your full model in production. dbt unit tests enable test-driven development, benefiting developer efficiency and code reliability.
+In software programming, unit tests validate small portions of your functional code, and they work much the same way in dbt. dbt unit tests allow you to validate your SQL modeling logic on a small set of static inputs _before_ you materialize your full model in production. dbt unit tests enable test-driven development, benefiting developer efficiency and code reliability.
 
 Unit tests allow enforcing that all the unit tests for a model pass before it is materialized (i.e. dbt won't materialize the model in the database if *any* of its unit tests do not pass).
 
@@ -264,7 +264,7 @@ When using the `dict` or `csv` format, you only have to define the mock data for
 
 #### Platform/adapter-specific caveats
 
-There are platform specific details required if implementing on (Redshift, BigQuery, etc). Read the `caveats_{platform_name}.md` file for the database you are on (if it exists).
+There are platform specific details required if implementing on (Redshift, BigQuery, etc). Read the `warehouses/{platform_name}/caveats.md` file for the database you are on (if it exists).
 
 # Platform/adapter-specific data types
 
@@ -272,7 +272,7 @@ Unit tests are designed to test for the expected _values_, not for the data type
 
 How you specify input and expected values in your unit test YAML definitions are largely consistent across data warehouses, with some variation for more complex data types.
 
-Read the `data_types_{platform_name}.md` file for the database you are on for examples.
+Read the `warehouses/{platform_name}/data_types.md` file for the database you are on for examples.
 
 # Disabling a unit test
 
