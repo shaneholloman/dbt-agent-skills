@@ -12,7 +12,7 @@ This skill contains guidance for the new dbt semantic layer YAML spec, valid for
 
 ## Entry Points
 
-Users may ask questions realtead to building metrics with teh semantic layer in a few differnet ways. Here are the common entry points to look out for:
+Users may ask questions related to building metrics with the semantic layer in a few differnet ways. Here are the common entry points to look out for:
 
 ### Business Question First
 
