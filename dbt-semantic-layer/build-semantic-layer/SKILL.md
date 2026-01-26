@@ -7,12 +7,22 @@ description: Use when creating or modifying dbt Semantic Layer components includ
 
 This skill guides the creation and modification of dbt Semantic Layer components: semantic models, entities, dimensions, and metrics.
 
+- **Semantic models** - Metadata configurations that define how dbt models map to business concepts
+- **Entities** - Keys that identify the grain of your data and enable joins between semantic models
+- **Dimensions** - Attributes used to filter or group metrics (categorical or time-based)
+- **Metrics** - Business calculations defined on top of semantic models (e.g., revenue, order count)
+
+## Additional Resources
+
+- [Time Spine Setup](references/time-spine.md) - Required for time-based metrics and aggregations
+- [Best Practices](references/best-practices.md) - Design patterns and recommendations for semantic models and metrics
+
 > [!NOTE]
 This skill contains guidance for the new dbt semantic layer YAML spec, valid for dbt 1.12.0 and above. If the user is using a different version of dbt, you can use the [migration guide](https://docs.getdbt.com/docs/build/latest-metrics-spec) to help them migrate to the new spec and add new components to their semantic layer. Ask the user if they want to migrate to the new spec before proceeding.
 
 ## Entry Points
 
-Users may ask questions related to building metrics with the semantic layer in a few differnet ways. Here are the common entry points to look out for:
+Users may ask questions related to building metrics with the semantic layer in a few different ways. Here are the common entry points to look out for:
 
 ### Business Question First
 
@@ -169,7 +179,9 @@ models:
 After writing YAML, validate in two stages:
 
 1. **Parse Validation**: Run `dbt parse` to confirm YAML syntax and references
-2. **Semantic Layer Validation**: Run `dbt sl validate` to check all metric configurations if using dbt Cloud CLI or dbt Fusion. If using dbt Local, you can use the `mf validate-configs` command to validate the semantic layer.
+2. **Semantic Layer Validation**:
+   - `dbt sl validate` (dbt Cloud CLI / dbt Fusion)
+   - `mf validate-configs` (MetricFlow CLI)
 
 Do not consider work complete until both validations pass.
 

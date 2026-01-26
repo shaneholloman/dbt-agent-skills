@@ -35,12 +35,21 @@
       "category": "operations"
     },
     {
-      "name": "adding-time-spine-metricflow-semantic-layer",
-      "description": "Use when setting up a dbt project for the semantic layer and time-based metrics are needed, when MetricFlow queries fail due to missing time spine, or when adding time dimensions to semantic models",
+      "name": "answering-natural-language-questions-with-dbt",
+      "description": "Use when answering business questions that require querying data in a dbt project, whether via semantic layer, model discovery, or manifest analysis",
       "author": {
         "name": "dbt Labs"
       },
-      "source": "./dbt-semantic-layer/adding-time-spine-metricflow-semantic-layer",
+      "source": "./dbt-semantic-layer/answering-natural-language-questions-with-dbt",
+      "category": "semantic-layer"
+    },
+    {
+      "name": "build-dbt-semantic-layer",
+      "description": "Use when creating or modifying dbt Semantic Layer components including semantic models, metrics, and dimensions leveraging MetricFlow.",
+      "author": {
+        "name": "dbt Labs"
+      },
+      "source": "./dbt-semantic-layer/build-semantic-layer",
       "category": "semantic-layer"
     },
     {

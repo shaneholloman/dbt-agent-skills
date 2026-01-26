@@ -1,8 +1,3 @@
----
-name: adding-time-spine-metricflow-semantic-layer
-description: Use when setting up a dbt project for the semantic layer and time-based metrics are needed, when MetricFlow queries fail due to missing time spine, or when adding time dimensions to semantic models
----
-
 # Add Time Spine for MetricFlow Semantic Layer
 
 ## Overview
