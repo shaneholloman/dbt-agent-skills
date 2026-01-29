@@ -24,6 +24,7 @@ More examples:
     - Window functions
     - `case when` statements when there are many `when`s
     - Truncation
+    - Complex joins (multiple joins, self-joins, or joins with non-trivial conditions)
 - When you're writing custom logic to process input data, similar to creating a function.
 - Logic for which you had bugs reported before.
 - Edge cases not yet seen in your actual data that you want to be confident you are handling properly.
@@ -57,6 +58,13 @@ Self explanatory -- the title says it all!
 - Specify the `format` if different than the default (YAML `dict`).
   - See the "Data `format`s for unit tests" section below to determine which `format` to use.
 - The mock data only needs include the subset of columns used within this test case.
+
+**Tip:** Use `dbt show` to explore existing data from upstream models or sources. This helps you understand realistic input structures. However, always sanitize the sample data to remove any sensitive or PII information before using it in your unit test fixtures.
+
+```shell
+# Preview upstream model data
+dbt show --select upstream_model --limit 5
+```
 
 ### 3. Mock the output
 
