@@ -1,6 +1,9 @@
 ---
 name: configuring-dbt-mcp-server
-description: Use when user wants to set up, configure, or troubleshoot the dbt MCP server for AI tools like Claude Desktop, Claude Code, Cursor, or VS Code
+description: Use when setting up, configuring, or troubleshooting the dbt MCP server for AI tools like Claude Desktop, Claude Code, Cursor, or VS Code.
+user-invocable: false
+metadata:
+  author: dbt-labs
 ---
 
 # Configure dbt MCP Server

@@ -1,6 +1,9 @@
 ---
 name: answering-natural-language-questions-with-dbt
 description: Use when a user asks a business question that requires querying data (e.g., "What were total sales last quarter?"). NOT for validating, testing, or building dbt models during development.
+user-invocable: false
+metadata:
+  author: dbt-labs
 ---
 
 # Answering Natural Language Questions with dbt

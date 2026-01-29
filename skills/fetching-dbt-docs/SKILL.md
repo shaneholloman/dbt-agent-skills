@@ -1,6 +1,9 @@
 ---
 name: fetching-dbt-docs
 description: Use when fetching dbt documentation, looking up dbt features, or answering questions about dbt Cloud, dbt Core, or the dbt Semantic Layer
+user-invocable: false
+metadata:
+  author: dbt-labs
 ---
 
 # Fetch dbt Docs

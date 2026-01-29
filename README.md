@@ -18,25 +18,43 @@ This repository contains skills that enable AI agents to:
 
 ## Repository Structure
 
-## Using These Skills
+## Installation
 
-Skills-compatible AI agents can automatically discover and use skills from this repository when working with dbt projects.
+### Claude Code (recommended)
 
-### Setup
+Add the dbt skills marketplace:
 
-1. Clone this repository:
+```bash
+/plugin marketplace add dbt-labs/dbt-agent-skills
+```
 
-   ```bash
-   git clone https://github.com/dbt-labs/llm-skills.git
-   ```
+Skills are fetched from this repository and **automatically stay up to date** as we publish improvements.
 
-2. Point your skills-compatible agent to the repository location
+### Other AI Clients
 
-3. The agent will automatically load relevant dbt skills based on your tasks
+Use the [Vercel Skills CLI](https://github.com/vercel-labs/skills) to install skills from this repository.
+
+> **Note:** This method copies skills into your project. To get updates, you'll need to re-run the install command.
+
+```bash
+# Preview available skills
+npx skills add dbt-labs/dbt-agent-skills --list
+
+# Install all skills
+npx skills add dbt-labs/dbt-agent-skills
+
+# Install a specific skill
+npx skills add dbt-labs/dbt-agent-skills --skill using-dbt-for-analytics-engineering
+
+# Install globally (across all projects)
+npx skills add dbt-labs/dbt-agent-skills --global
+```
+
+The Vercel Skills CLI supports 30+ AI agents including Cursor, Cline, GitHub Copilot, and others.
 
 ### Compatible Agents
 
-These skills work with AI agents that support the Agent Skills format. Check [agentskills.io](https://agentskills.io/home) for the latest list of compatible tools.
+These skills work with AI agents that support the [Agent Skills](https://agentskills.io/home) format.
 
 ## Available Skills
 

@@ -1,6 +1,9 @@
 ---
 name: adding-dbt-unit-test
-description: Use when adding unit tests for a dbt model
+description: Use when adding unit tests for a dbt model or practicing test-driven development (TDD) in dbt
+user-invocable: false
+metadata:
+  author: dbt-labs
 ---
 
 # Add unit test for a dbt model
@@ -264,10 +267,10 @@ When using the `dict` or `csv` format, you only have to define the mock data for
 
 # Special cases
 
-- Unit testing incremental models. See `special_case_incremental_model.md`.
-- Unit testing a model that depends on ephemeral model(s). See `special_case_ephemeral_dependency.md`.
-- Unit test a model that depends on any introspective macros, project variables, or environment variables. See `special_case_overrides.md`.
-- Unit testing versioned SQL models. See `special_case_versioned_model.md`.
+- Unit testing incremental models. See `special_cases/incremental_model.md`.
+- Unit testing a model that depends on ephemeral model(s). See `special_cases/ephemeral_dependency.md`.
+- Unit test a model that depends on any introspective macros, project variables, or environment variables. See `special_cases/special_case_overrides.md`.
+- Unit testing versioned SQL models. See `special_cases/versioned_model.md`.
 
 #### Platform/adapter-specific caveats
 
@@ -323,6 +326,16 @@ Use the `--empty` flag to build an empty version of the models to save warehouse
 dbt run --select "stg_customers top_level_email_domains" --empty
 
 ```
+
+## Common Mistakes
+
+| Mistake | Fix |
+|---------|-----|
+| Testing simple SQL using built-in functions | Only unit test complex logic: regex, date math, window functions, multi-condition case statements |
+| Mocking all columns in input data | Only include columns relevant to the test case |
+| Using `sql` format when `dict` works | Prefer `dict` (most readable), fall back to `csv` or `sql` only when needed |
+| Missing `input` for a `ref` or `source` | Include all model dependencies to avoid "node not found" errors |
+| Testing Python models or snapshots | Unit tests only support SQL models |
 
 ### Similar testing concepts
 

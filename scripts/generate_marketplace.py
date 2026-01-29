@@ -10,17 +10,18 @@ CATEGORY_MAP = {
     "fetching-dbt-docs": "documentation",
     "configuring-dbt-mcp-server": "integration",
     "troubleshooting-dbt-job-errors": "operations",
-    "querying-dbt-semantic-layer": "semantic-layer",
-    "build-semantic-layer": "semantic-layer",
+    "building-dbt-semantic-layer": "semantic-layer",
     "answering-natural-language-questions-with-dbt": "semantic-layer",
+    "migrating-dbt-core-to-fusion": "migration",
+    "adding-dbt-unit-test": "testing",
 }
 
 DEFAULT_CATEGORY = "analytics"
 
 MARKETPLACE_METADATA = {
     "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-    "name": "dbt-skills",
-    "description": "Skills for working with dbt Core and the dbt Fusion engine - analytics engineering, data modeling, semantic layer, and dbt Cloud operations",
+    "name": "dbt-agent-skills",
+    "description": "Skills for working with dbt Core and the dbt Fusion engine - analytics engineering, data modeling, semantic layer, and dbt platform (fka dbt Cloud) operations",
     "owner": {
         "name": "dbt Labs",
         "email": "support@getdbt.com"

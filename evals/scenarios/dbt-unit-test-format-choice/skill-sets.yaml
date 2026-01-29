@@ -4,4 +4,4 @@ sets:
 
   - name: add-unit-test-skill
     skills:
-      - skills/add-unit-test
+      - skills/adding-dbt-unit-test

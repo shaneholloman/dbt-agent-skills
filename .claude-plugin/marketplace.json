@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "dbt-skills",
-  "description": "Skills for working with dbt Core and the dbt Fusion engine - analytics engineering, data modeling, semantic layer, and dbt Cloud operations",
+  "name": "dbt-agent-skills",
+  "description": "Skills for working with dbt Core and the dbt Fusion engine - analytics engineering, data modeling, semantic layer, and dbt platform (fka dbt Cloud) operations",
   "owner": {
     "name": "dbt Labs",
     "email": "support@getdbt.com"
@@ -9,12 +9,12 @@
   "plugins": [
     {
       "name": "adding-dbt-unit-test",
-      "description": "Use when adding unit tests for a dbt model",
+      "description": "Use when adding unit tests for a dbt model or practicing test-driven development (TDD) in dbt",
       "author": {
         "name": "dbt Labs"
       },
-      "source": "./skills/add-unit-test",
-      "category": "analytics"
+      "source": "./skills/adding-dbt-unit-test",
+      "category": "testing"
     },
     {
       "name": "answering-natural-language-questions-with-dbt",
@@ -26,31 +26,22 @@
       "category": "semantic-layer"
     },
     {
-      "name": "build-dbt-semantic-layer",
+      "name": "building-dbt-semantic-layer",
       "description": "Use when creating or modifying dbt Semantic Layer components including semantic models, metrics, and dimensions leveraging MetricFlow.",
       "author": {
         "name": "dbt Labs"
       },
-      "source": "./skills/build-semantic-layer",
-      "category": "analytics"
+      "source": "./skills/building-dbt-semantic-layer",
+      "category": "semantic-layer"
     },
     {
       "name": "configuring-dbt-mcp-server",
-      "description": "Use when user wants to set up, configure, or troubleshoot the dbt MCP server for AI tools like Claude Desktop, Claude Code, Cursor, or VS Code",
+      "description": "Use when setting up, configuring, or troubleshooting the dbt MCP server for AI tools like Claude Desktop, Claude Code, Cursor, or VS Code.",
       "author": {
         "name": "dbt Labs"
       },
       "source": "./skills/configuring-dbt-mcp-server",
       "category": "integration"
-    },
-    {
-      "name": "migrate-core-to-fusion",
-      "description": "This skill migrates a project running on dbt Core or Mantle to run successfully on Fusion.",
-      "author": {
-        "name": "dbt Labs"
-      },
-      "source": "./skills/dbt-fusion-migration",
-      "category": "analytics"
     },
     {
       "name": "fetching-dbt-docs",
@@ -62,13 +53,13 @@
       "category": "documentation"
     },
     {
-      "name": "querying-dbt-semantic-layer",
-      "description": "Use when answering business questions that could be answered by querying data, when dbt MCP tools are available",
+      "name": "migrating-dbt-core-to-fusion",
+      "description": "Use when migrating a dbt project from dbt Core to run on the Fusion engine.",
       "author": {
         "name": "dbt Labs"
       },
-      "source": "./skills/querying-dbt-semantic-layer",
-      "category": "semantic-layer"
+      "source": "./skills/migrating-dbt-core-to-fusion",
+      "category": "migration"
     },
     {
       "name": "troubleshooting-dbt-job-errors",

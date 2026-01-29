@@ -1,7 +1,9 @@
 ---
-name: migrate-core-to-fusion
-description: This skill migrates a project running on dbt Core or Mantle to run successfully on Fusion.
+name: migrating-dbt-core-to-fusion
+description: Use when migrating a dbt project from dbt Core to run on the Fusion engine.
 compatibility: Designed for dbt Core v1.10+
+metadata:
+  author: dbt-labs
 ---
 
 ## Goals

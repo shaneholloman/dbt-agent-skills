@@ -1,6 +1,9 @@
 ---
 name: using-dbt-for-analytics-engineering
 description: Use when doing any dbt work - building or modifying models, debugging errors, exploring unfamiliar data sources, writing tests, or evaluating impact of changes. Use for analytics pipelines, data transformations, and data modeling.
+user-invocable: false
+metadata:
+  author: dbt-labs
 ---
 
 # Using dbt for Analytics Engineering
@@ -19,7 +22,7 @@ description: Use when doing any dbt work - building or modifying models, debuggi
 
 **Do NOT use for:**
 
-- Querying the semantic layer (use the `querying-dbt-semantic-layer` skill)
+- Querying the semantic layer (use the `answering-natural-language-questions-with-dbt` skill)
 
 ## Reference Guides
 

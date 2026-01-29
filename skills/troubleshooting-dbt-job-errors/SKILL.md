@@ -1,6 +1,9 @@
 ---
 name: troubleshooting-dbt-job-errors
 description: Use when a dbt Cloud/platform job fails and you need to diagnose the root cause, especially when error messages are unclear or when intermittent failures occur. Do not use for local dbt development errors.
+user-invocable: false
+metadata:
+  author: dbt-labs
 ---
 
 # Troubleshooting dbt Job Errors

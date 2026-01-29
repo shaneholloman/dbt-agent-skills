@@ -1,6 +1,9 @@
 ---
-name: build-dbt-semantic-layer
+name: building-dbt-semantic-layer
 description: Use when creating or modifying dbt Semantic Layer components including semantic models, metrics, and dimensions leveraging MetricFlow.
+user-invocable: false
+metadata:
+  author: dbt-labs
 ---
 
 # Building the dbt Semantic Layer
