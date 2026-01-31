@@ -36,9 +36,9 @@ def test_build_grading_prompt_includes_all_sections(tmp_path: Path) -> None:
     )
 
     # Create modified files
-    context_dir = output_dir / "context"
-    context_dir.mkdir()
-    (context_dir / "fixed_file.py").write_text("# fixed")
+    changes_dir = output_dir / "changes"
+    changes_dir.mkdir()
+    (changes_dir / "fixed_file.py").write_text("# fixed")
 
     prompt = build_grading_prompt(scenario_dir, output_dir)
 

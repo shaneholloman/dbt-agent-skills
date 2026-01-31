@@ -109,13 +109,13 @@ def build_grading_prompt(
 
     tools_str = "\n".join(tools_lines)
 
-    # List modified files in context/
-    context_dir = output_dir / "context"
+    # List modified files in changes/
+    changes_dir = output_dir / "changes"
     modified_files = []
-    if context_dir.exists():
-        for f in context_dir.rglob("*"):
+    if changes_dir.exists():
+        for f in changes_dir.rglob("*"):
             if f.is_file():
-                rel_path = f.relative_to(context_dir)
+                rel_path = f.relative_to(changes_dir)
                 modified_files.append(str(rel_path))
 
     modified_files_str = "\n".join(f"- {f}" for f in modified_files) if modified_files else "No files modified."

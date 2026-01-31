@@ -1,5 +1,6 @@
 """Runner for executing scenarios against skill variants."""
 
+import filecmp
 import json
 import os
 import shutil
@@ -40,6 +41,53 @@ class RunTask:
     scenario: Scenario
     skill_set: SkillSet
     run_dir: Path
+
+
+def _find_changed_files(
+    original_dir: Path,
+    modified_dir: Path,
+    exclude_names: set[str],
+) -> list[Path]:
+    """Find files that changed or were added in modified_dir compared to original_dir.
+
+    Uses filecmp for efficient stat-based comparison.
+    Returns list of relative paths to changed/new files.
+    """
+    changed: list[Path] = []
+
+    def _compare_dirs(dcmp: filecmp.dircmp, rel_path: Path = Path(".")) -> None:
+        # Files that differ
+        for name in dcmp.diff_files:
+            if name not in exclude_names:
+                changed.append(rel_path / name)
+
+        # Files only in modified_dir (new files)
+        for name in dcmp.right_only:
+            if name not in exclude_names:
+                item = modified_dir / rel_path / name
+                if item.is_file():
+                    changed.append(rel_path / name)
+                elif item.is_dir():
+                    # New directory - add all files within
+                    for f in item.rglob("*"):
+                        if f.is_file() and f.name not in exclude_names:
+                            changed.append(f.relative_to(modified_dir))
+
+        # Recurse into subdirectories
+        for name, sub_dcmp in dcmp.subdirs.items():
+            if name not in exclude_names:
+                _compare_dirs(sub_dcmp, rel_path / name)
+
+    # Handle case where original_dir doesn't exist (everything is new)
+    if not original_dir or not original_dir.exists():
+        for f in modified_dir.rglob("*"):
+            if f.is_file() and f.name not in exclude_names:
+                changed.append(f.relative_to(modified_dir))
+        return changed
+
+    dcmp = filecmp.dircmp(original_dir, modified_dir, ignore=list(exclude_names))
+    _compare_dirs(dcmp)
+    return changed
 
 
 class Runner:
@@ -436,28 +484,19 @@ class Runner:
             yaml.dump(metadata, default_flow_style=False, sort_keys=False)
         )
 
-        # Copy modified context (excluding .claude, caches, .env) to preserve changes
-        context_output = output_dir / "context"
+        # Copy only files that changed (excluding .claude, caches, .env)
+        changes_output = output_dir / "changes"
         exclude_names = {".claude", ".cache", "Caches", ".env"}
 
-        def ignore_patterns(directory: str, contents: list[str]) -> list[str]:
-            """Ignore caches, .env, and other excluded items."""
-            ignored = []
-            for name in contents:
-                if name in exclude_names:
-                    ignored.append(name)
-                elif directory.endswith("Library") and name == "Caches":
-                    ignored.append(name)
-            return ignored
+        changed_files = _find_changed_files(
+            scenario.context_dir, env_dir, exclude_names
+        )
 
-        for item in env_dir.iterdir():
-            if item.name not in exclude_names:
-                dest = context_output / item.name
-                if item.is_dir():
-                    shutil.copytree(item, dest, ignore=ignore_patterns)
-                else:
-                    context_output.mkdir(parents=True, exist_ok=True)
-                    shutil.copy(item, dest)
+        for rel_path in changed_files:
+            src = env_dir / rel_path
+            dest = changes_output / rel_path
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dest)
 
         self._generate_transcript(env_dir, output_dir, scenario.name, skill_set.name)
         shutil.rmtree(env_dir, ignore_errors=True)
