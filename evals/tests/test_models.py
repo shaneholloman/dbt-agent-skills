@@ -87,3 +87,52 @@ sets:
 
     skill_set = scenario.skill_sets[0]
     assert skill_set.allowed_tools == ["Read", "Glob", "Grep", "Bash(git:*)"]
+
+
+def test_load_scenario_parses_extra_prompt(tmp_path: Path) -> None:
+    """Scenario loads extra_prompt from skill-sets.yaml."""
+    scenario_dir = tmp_path / "test-scenario"
+    scenario_dir.mkdir()
+    (scenario_dir / "scenario.md").write_text("# Test")
+    (scenario_dir / "prompt.txt").write_text("Fix the bug")
+    (scenario_dir / "skill-sets.yaml").write_text(
+        """
+sets:
+  - name: no-extra
+    skills: []
+  - name: with-extra
+    skills: []
+    extra_prompt: Check if any skill can help with this task.
+"""
+    )
+
+    scenario = load_scenario(scenario_dir)
+
+    assert scenario.skill_sets[0].extra_prompt == ""
+    assert scenario.skill_sets[1].extra_prompt == "Check if any skill can help with this task."
+
+
+def test_load_scenario_parses_multiline_extra_prompt(tmp_path: Path) -> None:
+    """Scenario loads multiline extra_prompt using YAML block scalar."""
+    scenario_dir = tmp_path / "test-scenario"
+    scenario_dir.mkdir()
+    (scenario_dir / "scenario.md").write_text("# Test")
+    (scenario_dir / "prompt.txt").write_text("Debug this")
+    (scenario_dir / "skill-sets.yaml").write_text(
+        """
+sets:
+  - name: with-multiline
+    skills: []
+    extra_prompt: |
+      Before starting:
+      1. Check if any skill can help
+      2. Use the MCP server if available
+"""
+    )
+
+    scenario = load_scenario(scenario_dir)
+
+    extra = scenario.skill_sets[0].extra_prompt
+    assert "Before starting:" in extra
+    assert "1. Check if any skill can help" in extra
+    assert "2. Use the MCP server if available" in extra

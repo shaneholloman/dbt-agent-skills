@@ -452,9 +452,14 @@ class Runner:
             mcp_servers=skill_set.mcp_servers if skill_set.mcp_servers else None,
         )
 
+        # Combine base prompt with skill set's extra_prompt (if any)
+        prompt = scenario.prompt
+        if skill_set.extra_prompt:
+            prompt = f"{prompt}\n\n{skill_set.extra_prompt}"
+
         parsed, success, error, raw_json = self.run_claude(
             env_dir,
-            scenario.prompt,
+            prompt,
             mcp_config_path,
             skill_set.allowed_tools if skill_set.allowed_tools else None,
         )

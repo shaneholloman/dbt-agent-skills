@@ -885,3 +885,83 @@ def test_find_changed_files_handles_none_original(tmp_path: Path) -> None:
 
     assert len(changed) == 1
     assert Path("file.txt") in changed
+
+
+def test_run_scenario_appends_extra_prompt(tmp_path: Path) -> None:
+    """run_scenario appends skill_set.extra_prompt to base prompt."""
+    from skill_eval.models import Scenario, SkillSet
+
+    evals_dir = tmp_path / "evals"
+    evals_dir.mkdir()
+    (evals_dir / "runs").mkdir()
+
+    scenario_dir = tmp_path / "scenarios" / "test"
+    scenario_dir.mkdir(parents=True)
+
+    scenario = Scenario(
+        name="test-scenario",
+        path=scenario_dir,
+        prompt="Fix the bug",
+        skill_sets=[],
+    )
+
+    skill_set = SkillSet(
+        name="with-extra",
+        skills=[],
+        extra_prompt="Check if any skill can help.",
+    )
+
+    runner = Runner(evals_dir=evals_dir)
+    run_dir = runner.create_run_dir()
+
+    captured_prompt = None
+
+    def mock_run_claude(env_dir, prompt, mcp_config_path, allowed_tools):
+        nonlocal captured_prompt
+        captured_prompt = prompt
+        return {"output_text": "Done", "skills_invoked": [], "tools_used": []}, True, None, ""
+
+    with patch.object(runner, "run_claude", side_effect=mock_run_claude):
+        runner.run_scenario(scenario, skill_set, run_dir)
+
+    assert captured_prompt == "Fix the bug\n\nCheck if any skill can help."
+
+
+def test_run_scenario_no_extra_prompt_unchanged(tmp_path: Path) -> None:
+    """run_scenario uses base prompt unchanged when extra_prompt is empty."""
+    from skill_eval.models import Scenario, SkillSet
+
+    evals_dir = tmp_path / "evals"
+    evals_dir.mkdir()
+    (evals_dir / "runs").mkdir()
+
+    scenario_dir = tmp_path / "scenarios" / "test"
+    scenario_dir.mkdir(parents=True)
+
+    scenario = Scenario(
+        name="test-scenario",
+        path=scenario_dir,
+        prompt="Fix the bug",
+        skill_sets=[],
+    )
+
+    skill_set = SkillSet(
+        name="no-extra",
+        skills=[],
+        # No extra_prompt set (defaults to "")
+    )
+
+    runner = Runner(evals_dir=evals_dir)
+    run_dir = runner.create_run_dir()
+
+    captured_prompt = None
+
+    def mock_run_claude(env_dir, prompt, mcp_config_path, allowed_tools):
+        nonlocal captured_prompt
+        captured_prompt = prompt
+        return {"output_text": "Done", "skills_invoked": [], "tools_used": []}, True, None, ""
+
+    with patch.object(runner, "run_claude", side_effect=mock_run_claude):
+        runner.run_scenario(scenario, skill_set, run_dir)
+
+    assert captured_prompt == "Fix the bug"
