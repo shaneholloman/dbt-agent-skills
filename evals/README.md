@@ -65,7 +65,7 @@ evals/
 
 ### skill-sets.yaml
 
-Define skill combinations, MCP servers, and tool permissions:
+Define skill combinations, MCP servers, tool permissions, and prompt variations:
 
 ```yaml
 sets:
@@ -107,6 +107,16 @@ sets:
     skills:
       - skills/fetching-dbt-docs
     # No allowed_tools = allows everything
+
+  # With extra instructions appended to the prompt
+  - name: with-skill-hint
+    skills:
+      - skills/debugging-dbt-errors
+    extra_prompt: Check if any skill can help with this task.
+    allowed_tools:
+      - Read
+      - Glob
+      - Skill
 ```
 
 ### Skills
@@ -185,6 +195,40 @@ allowed_tools:
 ```
 
 If `allowed_tools` is omitted, all tools are allowed.
+
+### Extra Prompt
+
+Append additional instructions to the base prompt for specific skill sets:
+
+```yaml
+sets:
+  # Baseline - just the prompt.txt content
+  - name: no-hint
+    skills:
+      - skills/debugging-dbt-errors
+    allowed_tools: [Read, Glob, Skill]
+
+  # With hint - prompt.txt + extra_prompt
+  - name: with-hint
+    skills:
+      - skills/debugging-dbt-errors
+    extra_prompt: Check if any skill can help with this task.
+    allowed_tools: [Read, Glob, Skill]
+```
+
+Use this to test whether additional instructions affect skill invocation or behavior. For example:
+- "Check if any skill can help with this task."
+- "Use the MCP server to investigate this issue."
+- "Think step by step before making changes."
+
+Multiline prompts are supported using YAML block scalars:
+
+```yaml
+extra_prompt: |
+  Before starting:
+  1. Check if any skill can help
+  2. Use the MCP server if available
+```
 
 ## Run Output
 

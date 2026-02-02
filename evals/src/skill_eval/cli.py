@@ -6,15 +6,17 @@ from typing import Optional
 import typer
 
 from skill_eval import __version__
+from skill_eval.selector import is_interactive, select_run, select_scenarios
 
 app = typer.Typer(help="A/B test skill variations against recorded scenarios.")
 
 
-def get_latest_run(runs_dir: Path) -> Path:
+def get_latest_run(runs_dir: Path, *, silent: bool = False) -> Path:
     """Get the most recent run directory.
 
     Args:
         runs_dir: Directory containing runs
+        silent: If True, don't print the run name
 
     Returns:
         Path to the most recent run directory
@@ -34,16 +36,18 @@ def get_latest_run(runs_dir: Path) -> Path:
         typer.echo("Error: No runs found", err=True)
         raise typer.Exit(1)
 
-    typer.echo(f"Using latest run: {run_dirs[0].name}")
+    if not silent:
+        typer.echo(f"Using latest run: {run_dirs[0].name}")
     return run_dirs[0]
 
 
-def find_run(runs_dir: Path, run_id: Optional[str]) -> Path:
-    """Find a run by exact or partial ID match, or get latest if no ID provided.
+def find_run(runs_dir: Path, run_id: Optional[str], *, latest: bool = False) -> Path:
+    """Find a run by exact or partial ID match, or get latest/prompt if no ID provided.
 
     Args:
         runs_dir: Directory containing runs
-        run_id: Full or partial run ID, or None for latest
+        run_id: Full or partial run ID, or None for latest/interactive
+        latest: If True and no run_id, use latest without prompting
 
     Returns:
         Path to the matching run directory
@@ -51,18 +55,40 @@ def find_run(runs_dir: Path, run_id: Optional[str]) -> Path:
     Raises:
         typer.Exit: If no match or multiple matches found
     """
-    if run_id is None:
-        return get_latest_run(runs_dir)
-
-    # Try exact match first
-    exact_match = runs_dir / run_id
-    if exact_match.exists() and exact_match.is_dir():
-        return exact_match
+    if not runs_dir.exists():
+        typer.echo("Error: No runs directory found", err=True)
+        raise typer.Exit(1)
 
     # Get all run directories
     all_runs = [
         d for d in runs_dir.iterdir() if d.is_dir() and not d.name.startswith(".")
     ]
+
+    if not all_runs:
+        typer.echo("Error: No runs found", err=True)
+        raise typer.Exit(1)
+
+    if run_id is None:
+        # No run_id provided - decide behavior based on flags and interactivity
+        if latest:
+            return get_latest_run(runs_dir)
+
+        if is_interactive():
+            # Show interactive selector
+            selected = select_run(all_runs, "Select a run")
+            if selected is None:
+                typer.echo("Selection cancelled", err=True)
+                raise typer.Exit(1)
+            typer.echo(f"Selected run: {selected.name}")
+            return selected
+        else:
+            # Non-interactive: fall back to latest
+            return get_latest_run(runs_dir)
+
+    # Try exact match first
+    exact_match = runs_dir / run_id
+    if exact_match.exists() and exact_match.is_dir():
+        return exact_match
 
     # Try partial match (contains)
     matches = [d for d in all_runs if run_id in d.name]
@@ -71,12 +97,22 @@ def find_run(runs_dir: Path, run_id: Optional[str]) -> Path:
         typer.echo(f"Matched run: {matches[0].name}")
         return matches[0]
     elif len(matches) > 1:
-        typer.echo(f"Error: '{run_id}' matches multiple runs:", err=True)
-        for m in sorted(matches, key=lambda d: d.name, reverse=True)[:10]:
-            typer.echo(f"  - {m.name}", err=True)
-        if len(matches) > 10:
-            typer.echo(f"  ... and {len(matches) - 10} more", err=True)
-        raise typer.Exit(1)
+        # Multiple matches
+        if is_interactive():
+            # Show selector with only the matching runs
+            selected = select_run(matches, f"Multiple runs match '{run_id}'")
+            if selected is None:
+                typer.echo("Selection cancelled", err=True)
+                raise typer.Exit(1)
+            typer.echo(f"Selected run: {selected.name}")
+            return selected
+        else:
+            typer.echo(f"Error: '{run_id}' matches multiple runs:", err=True)
+            for m in sorted(matches, key=lambda d: d.name, reverse=True)[:10]:
+                typer.echo(f"  - {m.name}", err=True)
+            if len(matches) > 10:
+                typer.echo(f"  ... and {len(matches) - 10} more", err=True)
+            raise typer.Exit(1)
     else:
         typer.echo(f"Error: No run matching '{run_id}'", err=True)
         recent = sorted(all_runs, key=lambda d: d.name, reverse=True)[:5]
@@ -84,6 +120,78 @@ def find_run(runs_dir: Path, run_id: Optional[str]) -> Path:
             typer.echo("Recent runs:", err=True)
             for r in recent:
                 typer.echo(f"  - {r.name}", err=True)
+        raise typer.Exit(1)
+
+
+def find_scenarios(
+    scenarios_dir: Path, names: list[str] | None, *, all_flag: bool = False
+) -> list[Path]:
+    """Find scenarios by name or prompt for selection.
+
+    Args:
+        scenarios_dir: Directory containing scenarios
+        names: List of scenario names (can be partial matches), or None
+        all_flag: If True, return all scenarios without prompting
+
+    Returns:
+        List of scenario directory paths
+
+    Raises:
+        typer.Exit: If no scenarios found or selection cancelled
+    """
+    if not scenarios_dir.exists():
+        typer.echo("Error: No scenarios directory found", err=True)
+        raise typer.Exit(1)
+
+    # Get all scenario directories (exclude only hidden dirs starting with .)
+    all_scenarios = [
+        d
+        for d in scenarios_dir.iterdir()
+        if d.is_dir() and not d.name.startswith(".")
+    ]
+
+    if not all_scenarios:
+        typer.echo("Error: No scenarios found", err=True)
+        raise typer.Exit(1)
+
+    if all_flag:
+        return sorted(all_scenarios, key=lambda d: d.name)
+
+    if names:
+        # Match provided names
+        matched: list[Path] = []
+        for name in names:
+            # Try exact match first
+            exact = scenarios_dir / name
+            if exact.exists() and exact.is_dir():
+                matched.append(exact)
+                continue
+            # Try partial match
+            partial_matches = [d for d in all_scenarios if name in d.name]
+            if len(partial_matches) == 1:
+                matched.append(partial_matches[0])
+            elif len(partial_matches) > 1:
+                typer.echo(f"Error: '{name}' matches multiple scenarios:", err=True)
+                for m in partial_matches:
+                    typer.echo(f"  - {m.name}", err=True)
+                raise typer.Exit(1)
+            else:
+                typer.echo(f"Error: No scenario matching '{name}'", err=True)
+                raise typer.Exit(1)
+        return matched
+
+    # No names provided - decide behavior based on interactivity
+    if is_interactive():
+        # Show interactive multi-selector
+        selected = select_scenarios(all_scenarios, "Select scenarios to run")
+        if not selected:
+            typer.echo("No scenarios selected", err=True)
+            raise typer.Exit(1)
+        typer.echo(f"Selected {len(selected)} scenario(s)")
+        return selected
+    else:
+        # Non-interactive without --all: error
+        typer.echo("Error: Specify scenario names or use --all", err=True)
         raise typer.Exit(1)
 
 
@@ -105,7 +213,9 @@ def main(
 
 @app.command()
 def run(
-    scenario: Optional[str] = typer.Argument(None, help="Scenario name to run"),
+    scenarios: Optional[list[str]] = typer.Argument(
+        None, help="Scenario names to run (supports partial matches)"
+    ),
     all_scenarios: bool = typer.Option(False, "--all", help="Run all scenarios"),
     parallel: bool = typer.Option(False, "--parallel", "-p", help="Run tasks in parallel"),
     workers: int = typer.Option(4, "--workers", "-w", help="Number of parallel workers"),
@@ -117,19 +227,7 @@ def run(
     evals_dir = Path.cwd()
     scenarios_dir = evals_dir / "scenarios"
 
-    if all_scenarios:
-        scenario_dirs = [
-            d for d in scenarios_dir.iterdir() if d.is_dir() and not d.name.startswith(".")
-        ]
-    elif scenario:
-        scenario_path = scenarios_dir / scenario
-        if not scenario_path.exists():
-            typer.echo(f"Error: Scenario not found: {scenario}", err=True)
-            raise typer.Exit(1)
-        scenario_dirs = [scenario_path]
-    else:
-        typer.echo("Error: Specify a scenario name or use --all", err=True)
-        raise typer.Exit(1)
+    scenario_dirs = find_scenarios(scenarios_dir, scenarios, all_flag=all_scenarios)
 
     runner = Runner(evals_dir=evals_dir)
     run_dir = runner.create_run_dir()
@@ -137,13 +235,13 @@ def run(
     typer.echo(f"Run directory: {run_dir}")
 
     # Load all scenarios
-    scenarios = [load_scenario(d) for d in sorted(scenario_dirs)]
+    loaded_scenarios = [load_scenario(d) for d in sorted(scenario_dirs)]
 
     if parallel:
         # Build task list for all scenario/skill-set combinations
         tasks = [
             RunTask(scenario=s, skill_set=ss, run_dir=run_dir)
-            for s in scenarios
+            for s in loaded_scenarios
             for ss in s.skill_sets
         ]
 
@@ -170,7 +268,7 @@ def run(
         typer.echo(f"\nRun complete: {passed} passed, {failed} failed")
     else:
         # Sequential execution (original behavior)
-        for scenario_obj in scenarios:
+        for scenario_obj in loaded_scenarios:
             typer.echo(f"\nScenario: {scenario_obj.name}")
 
             for skill_set in scenario_obj.skill_sets:
@@ -190,6 +288,7 @@ def run(
 def grade(
     run_id: Optional[str] = typer.Argument(None, help="Run ID (full or partial). Defaults to latest run."),
     auto: bool = typer.Option(False, "--auto", help="Auto-grade using Claude"),
+    latest: bool = typer.Option(False, "--latest", "-l", help="Use latest run without prompting"),
 ) -> None:
     """Grade outputs from a run."""
     import yaml
@@ -208,7 +307,7 @@ def grade(
     runs_dir = evals_dir / "runs"
     scenarios_dir = evals_dir / "scenarios"
 
-    run_dir = find_run(runs_dir, run_id)
+    run_dir = find_run(runs_dir, run_id, latest=latest)
 
     if auto:
         typer.echo(f"Auto-grading run: {run_id}")
@@ -292,14 +391,17 @@ def grade(
 
 
 @app.command()
-def report(run_id: Optional[str] = typer.Argument(None, help="Run ID (full or partial). Defaults to latest run.")) -> None:
+def report(
+    run_id: Optional[str] = typer.Argument(None, help="Run ID (full or partial). Defaults to latest run."),
+    latest: bool = typer.Option(False, "--latest", "-l", help="Use latest run without prompting"),
+) -> None:
     """Generate comparison report for a run."""
     from skill_eval.reporter import print_rich_report, save_report
 
     evals_dir = Path.cwd()
     runs_dir = evals_dir / "runs"
 
-    run_dir = find_run(runs_dir, run_id)
+    run_dir = find_run(runs_dir, run_id, latest=latest)
 
     reports_dir = evals_dir / "reports"
     reports_dir.mkdir(exist_ok=True)
@@ -313,6 +415,7 @@ def report(run_id: Optional[str] = typer.Argument(None, help="Run ID (full or pa
 @app.command()
 def review(
     run_id: Optional[str] = typer.Argument(None, help="Run ID (full or partial). Defaults to latest run."),
+    latest: bool = typer.Option(False, "--latest", "-l", help="Use latest run without prompting"),
 ) -> None:
     """Open HTML transcripts in browser for review."""
     import webbrowser
@@ -320,7 +423,7 @@ def review(
     evals_dir = Path.cwd()
     runs_dir = evals_dir / "runs"
 
-    run_dir = find_run(runs_dir, run_id)
+    run_dir = find_run(runs_dir, run_id, latest=latest)
 
     # Find all transcript index.html files
     transcripts = list(run_dir.glob("**/transcript/index.html"))

@@ -9,6 +9,7 @@ from skill_eval.grader import (
     auto_grade_run,
     build_grading_prompt,
     call_claude_grader,
+    compute_skill_usage,
     parse_grade_response,
 )
 from skill_eval.models import Grade
@@ -36,9 +37,9 @@ def test_build_grading_prompt_includes_all_sections(tmp_path: Path) -> None:
     )
 
     # Create modified files
-    context_dir = output_dir / "context"
-    context_dir.mkdir()
-    (context_dir / "fixed_file.py").write_text("# fixed")
+    changes_dir = output_dir / "changes"
+    changes_dir.mkdir()
+    (changes_dir / "fixed_file.py").write_text("# fixed")
 
     prompt = build_grading_prompt(scenario_dir, output_dir)
 
@@ -252,3 +253,68 @@ def test_auto_grade_run_skips_hidden_dirs(tmp_path: Path) -> None:
 
     # Should only have 'test' scenario, not '.DS_Store'
     assert list(grades["results"].keys()) == ["test"]
+
+
+# compute_skill_usage tests
+
+
+def test_compute_skill_usage_calculates_percentage() -> None:
+    """compute_skill_usage returns correct percentage when skills are used."""
+    metadata = {
+        "skills_available": ["skill-a", "skill-b", "skill-c"],
+        "skills_invoked": ["skill-a", "skill-c"],
+    }
+
+    available, invoked, pct = compute_skill_usage(metadata)
+
+    assert available == ["skill-a", "skill-b", "skill-c"]
+    assert invoked == ["skill-a", "skill-c"]
+    assert pct is not None
+    assert abs(pct - 66.67) < 1  # 2/3 = ~66.67%
+
+
+def test_compute_skill_usage_handles_no_skills_available() -> None:
+    """compute_skill_usage returns None percentage when no skills available."""
+    metadata = {"skills_available": [], "skills_invoked": []}
+
+    available, invoked, pct = compute_skill_usage(metadata)
+
+    assert available == []
+    assert invoked == []
+    assert pct is None
+
+
+def test_compute_skill_usage_handles_missing_keys() -> None:
+    """compute_skill_usage handles missing metadata keys."""
+    metadata = {}
+
+    available, invoked, pct = compute_skill_usage(metadata)
+
+    assert available == []
+    assert invoked == []
+    assert pct is None
+
+
+def test_compute_skill_usage_handles_all_skills_used() -> None:
+    """compute_skill_usage returns 100% when all skills are used."""
+    metadata = {
+        "skills_available": ["skill-a", "skill-b"],
+        "skills_invoked": ["skill-a", "skill-b"],
+    }
+
+    available, invoked, pct = compute_skill_usage(metadata)
+
+    assert pct == 100.0
+
+
+def test_compute_skill_usage_handles_extra_invocations() -> None:
+    """compute_skill_usage handles skills invoked that weren't in available list."""
+    metadata = {
+        "skills_available": ["skill-a"],
+        "skills_invoked": ["skill-a", "skill-external"],
+    }
+
+    available, invoked, pct = compute_skill_usage(metadata)
+
+    assert invoked == ["skill-a", "skill-external"]
+    assert pct == 100.0  # 1/1 available skill was used

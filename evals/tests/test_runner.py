@@ -731,3 +731,237 @@ def test_run_parallel_respects_max_workers(tmp_path: Path) -> None:
 
     # Should never exceed max_workers
     assert max_concurrent <= 2
+
+
+def test_find_changed_files_detects_modified_files(tmp_path: Path) -> None:
+    """_find_changed_files detects files with different content."""
+    from skill_eval.runner import _find_changed_files
+
+    original = tmp_path / "original"
+    modified = tmp_path / "modified"
+    original.mkdir()
+    modified.mkdir()
+
+    # Same content - should not be detected
+    (original / "unchanged.txt").write_text("same content")
+    (modified / "unchanged.txt").write_text("same content")
+
+    # Different content - should be detected
+    (original / "changed.txt").write_text("original content")
+    (modified / "changed.txt").write_text("modified content")
+
+    changed = _find_changed_files(original, modified, set())
+
+    assert len(changed) == 1
+    assert Path("changed.txt") in changed
+
+
+def test_find_changed_files_detects_new_files(tmp_path: Path) -> None:
+    """_find_changed_files detects files only in modified directory."""
+    from skill_eval.runner import _find_changed_files
+
+    original = tmp_path / "original"
+    modified = tmp_path / "modified"
+    original.mkdir()
+    modified.mkdir()
+
+    (original / "existing.txt").write_text("exists in both")
+    (modified / "existing.txt").write_text("exists in both")
+    (modified / "new_file.txt").write_text("only in modified")
+
+    changed = _find_changed_files(original, modified, set())
+
+    assert len(changed) == 1
+    assert Path("new_file.txt") in changed
+
+
+def test_find_changed_files_detects_new_directories(tmp_path: Path) -> None:
+    """_find_changed_files detects all files in new directories."""
+    from skill_eval.runner import _find_changed_files
+
+    original = tmp_path / "original"
+    modified = tmp_path / "modified"
+    original.mkdir()
+    modified.mkdir()
+
+    # New directory with multiple files
+    new_dir = modified / "new_dir"
+    new_dir.mkdir()
+    (new_dir / "file1.txt").write_text("content 1")
+    (new_dir / "file2.txt").write_text("content 2")
+
+    changed = _find_changed_files(original, modified, set())
+
+    assert len(changed) == 2
+    assert Path("new_dir/file1.txt") in changed
+    assert Path("new_dir/file2.txt") in changed
+
+
+def test_find_changed_files_respects_exclusions(tmp_path: Path) -> None:
+    """_find_changed_files excludes specified names."""
+    from skill_eval.runner import _find_changed_files
+
+    original = tmp_path / "original"
+    modified = tmp_path / "modified"
+    original.mkdir()
+    modified.mkdir()
+
+    # New file that should be excluded
+    (modified / ".cache").mkdir()
+    (modified / ".cache" / "data.txt").write_text("cached")
+
+    # New file that should be included
+    (modified / "included.txt").write_text("include me")
+
+    # Modified file that should be excluded by name
+    (original / ".env").write_text("old")
+    (modified / ".env").write_text("new")
+
+    changed = _find_changed_files(original, modified, {".cache", ".env"})
+
+    assert len(changed) == 1
+    assert Path("included.txt") in changed
+
+
+def test_find_changed_files_recurses_subdirectories(tmp_path: Path) -> None:
+    """_find_changed_files finds changes in nested subdirectories."""
+    from skill_eval.runner import _find_changed_files
+
+    original = tmp_path / "original"
+    modified = tmp_path / "modified"
+    original.mkdir()
+    modified.mkdir()
+
+    # Create matching subdirectory structure
+    (original / "models").mkdir()
+    (modified / "models").mkdir()
+
+    # Unchanged file in subdir
+    (original / "models" / "unchanged.sql").write_text("SELECT 1")
+    (modified / "models" / "unchanged.sql").write_text("SELECT 1")
+
+    # Changed file in subdir
+    (original / "models" / "changed.sql").write_text("SELECT 1")
+    (modified / "models" / "changed.sql").write_text("SELECT 2")
+
+    # New file in subdir
+    (modified / "models" / "new.sql").write_text("SELECT 3")
+
+    changed = _find_changed_files(original, modified, set())
+
+    assert len(changed) == 2
+    assert Path("models/changed.sql") in changed
+    assert Path("models/new.sql") in changed
+
+
+def test_find_changed_files_handles_missing_original(tmp_path: Path) -> None:
+    """_find_changed_files treats all files as new when original doesn't exist."""
+    from skill_eval.runner import _find_changed_files
+
+    modified = tmp_path / "modified"
+    modified.mkdir()
+
+    (modified / "file1.txt").write_text("content")
+    (modified / "subdir").mkdir()
+    (modified / "subdir" / "file2.txt").write_text("content")
+
+    # Original doesn't exist
+    changed = _find_changed_files(tmp_path / "nonexistent", modified, set())
+
+    assert len(changed) == 2
+    assert Path("file1.txt") in changed
+    assert Path("subdir/file2.txt") in changed
+
+
+def test_find_changed_files_handles_none_original(tmp_path: Path) -> None:
+    """_find_changed_files treats all files as new when original is None."""
+    from skill_eval.runner import _find_changed_files
+
+    modified = tmp_path / "modified"
+    modified.mkdir()
+    (modified / "file.txt").write_text("content")
+
+    changed = _find_changed_files(None, modified, set())  # type: ignore[arg-type]
+
+    assert len(changed) == 1
+    assert Path("file.txt") in changed
+
+
+def test_run_scenario_appends_extra_prompt(tmp_path: Path) -> None:
+    """run_scenario appends skill_set.extra_prompt to base prompt."""
+    from skill_eval.models import Scenario, SkillSet
+
+    evals_dir = tmp_path / "evals"
+    evals_dir.mkdir()
+    (evals_dir / "runs").mkdir()
+
+    scenario_dir = tmp_path / "scenarios" / "test"
+    scenario_dir.mkdir(parents=True)
+
+    scenario = Scenario(
+        name="test-scenario",
+        path=scenario_dir,
+        prompt="Fix the bug",
+        skill_sets=[],
+    )
+
+    skill_set = SkillSet(
+        name="with-extra",
+        skills=[],
+        extra_prompt="Check if any skill can help.",
+    )
+
+    runner = Runner(evals_dir=evals_dir)
+    run_dir = runner.create_run_dir()
+
+    captured_prompt = None
+
+    def mock_run_claude(env_dir, prompt, mcp_config_path, allowed_tools):
+        nonlocal captured_prompt
+        captured_prompt = prompt
+        return {"output_text": "Done", "skills_invoked": [], "tools_used": []}, True, None, ""
+
+    with patch.object(runner, "run_claude", side_effect=mock_run_claude):
+        runner.run_scenario(scenario, skill_set, run_dir)
+
+    assert captured_prompt == "Fix the bug\n\nCheck if any skill can help."
+
+
+def test_run_scenario_no_extra_prompt_unchanged(tmp_path: Path) -> None:
+    """run_scenario uses base prompt unchanged when extra_prompt is empty."""
+    from skill_eval.models import Scenario, SkillSet
+
+    evals_dir = tmp_path / "evals"
+    evals_dir.mkdir()
+    (evals_dir / "runs").mkdir()
+
+    scenario_dir = tmp_path / "scenarios" / "test"
+    scenario_dir.mkdir(parents=True)
+
+    scenario = Scenario(
+        name="test-scenario",
+        path=scenario_dir,
+        prompt="Fix the bug",
+        skill_sets=[],
+    )
+
+    skill_set = SkillSet(
+        name="no-extra",
+        skills=[],
+        # No extra_prompt set (defaults to "")
+    )
+
+    runner = Runner(evals_dir=evals_dir)
+    run_dir = runner.create_run_dir()
+
+    captured_prompt = None
+
+    def mock_run_claude(env_dir, prompt, mcp_config_path, allowed_tools):
+        nonlocal captured_prompt
+        captured_prompt = prompt
+        return {"output_text": "Done", "skills_invoked": [], "tools_used": []}, True, None, ""
+
+    with patch.object(runner, "run_claude", side_effect=mock_run_claude):
+        runner.run_scenario(scenario, skill_set, run_dir)
+
+    assert captured_prompt == "Fix the bug"

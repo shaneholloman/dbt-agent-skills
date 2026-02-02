@@ -10,6 +10,32 @@ import yaml
 
 from skill_eval.models import Grade
 
+
+def compute_skill_usage(metadata: dict) -> tuple[list[str], list[str], float | None]:
+    """Compute skill usage statistics from run metadata.
+
+    Args:
+        metadata: Run metadata containing skills_available and skills_invoked
+
+    Returns:
+        Tuple of (skills_available, skills_invoked, usage_percentage)
+        usage_percentage is None if no skills were available
+    """
+    available = metadata.get("skills_available", [])
+    invoked = metadata.get("skills_invoked", [])
+
+    if not available:
+        return available, invoked, None
+
+    # Calculate percentage of available skills that were invoked
+    invoked_set = set(invoked)
+    available_set = set(available)
+    used_count = len(invoked_set & available_set)
+    pct = (used_count / len(available_set)) * 100 if available_set else None
+
+    return available, invoked, pct
+
+
 GRADING_PROMPT_TEMPLATE = """You are grading an AI assistant's response to a task.
 
 ## Task Given
@@ -109,13 +135,13 @@ def build_grading_prompt(
 
     tools_str = "\n".join(tools_lines)
 
-    # List modified files in context/
-    context_dir = output_dir / "context"
+    # List modified files in changes/
+    changes_dir = output_dir / "changes"
     modified_files = []
-    if context_dir.exists():
-        for f in context_dir.rglob("*"):
+    if changes_dir.exists():
+        for f in changes_dir.rglob("*"):
             if f.is_file():
-                rel_path = f.relative_to(context_dir)
+                rel_path = f.relative_to(changes_dir)
                 modified_files.append(str(rel_path))
 
     modified_files_str = "\n".join(f"- {f}" for f in modified_files) if modified_files else "No files modified."
@@ -161,6 +187,7 @@ def call_claude_grader(prompt: str) -> str:
     cmd = [
         "claude",
         "--print",
+        "--no-session-persistence",
         "-p",
         prompt,
     ]

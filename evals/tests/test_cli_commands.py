@@ -1,0 +1,365 @@
+"""Integration tests for CLI commands using Typer's CliRunner."""
+
+import os
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import yaml
+from typer.testing import CliRunner
+
+from skill_eval.cli import app
+
+runner = CliRunner()
+
+
+class TestRunCommand:
+    """Tests for the 'run' command."""
+
+    def test_run_requires_scenario_or_all(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """run command errors when no scenario specified and not interactive."""
+        monkeypatch.chdir(tmp_path)
+        scenarios_dir = tmp_path / "scenarios"
+        scenarios_dir.mkdir()
+        (scenarios_dir / "test-scenario").mkdir()
+
+        with patch("skill_eval.cli.is_interactive", return_value=False):
+            result = runner.invoke(app, ["run"])
+
+        assert result.exit_code == 1
+        assert "Specify scenario names or use --all" in result.output
+
+    def test_run_with_all_flag(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """run command with --all runs all scenarios."""
+        monkeypatch.chdir(tmp_path)
+
+        # Create scenario
+        scenarios_dir = tmp_path / "scenarios"
+        scenario_dir = scenarios_dir / "test-scenario"
+        scenario_dir.mkdir(parents=True)
+        (scenario_dir / "prompt.txt").write_text("Do something")
+        (scenario_dir / "skill-sets.yaml").write_text(
+            yaml.dump({"sets": [{"name": "baseline", "skills": []}]})
+        )
+
+        # Mock the runner to avoid actually running Claude
+        with patch("skill_eval.runner.Runner") as MockRunner:
+            mock_runner = MockRunner.return_value
+            mock_runner.create_run_dir.return_value = tmp_path / "runs" / "test-run"
+            mock_runner.run_scenario.return_value = MagicMock(success=True, error=None)
+
+            result = runner.invoke(app, ["run", "--all"])
+
+        assert result.exit_code == 0
+        assert "Run directory:" in result.output
+        mock_runner.run_scenario.assert_called()
+
+    def test_run_with_specific_scenario(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """run command with scenario name runs that scenario."""
+        monkeypatch.chdir(tmp_path)
+
+        # Create scenario
+        scenarios_dir = tmp_path / "scenarios"
+        scenario_dir = scenarios_dir / "my-scenario"
+        scenario_dir.mkdir(parents=True)
+        (scenario_dir / "prompt.txt").write_text("Do something")
+        (scenario_dir / "skill-sets.yaml").write_text(
+            yaml.dump({"sets": [{"name": "baseline", "skills": []}]})
+        )
+
+        with patch("skill_eval.runner.Runner") as MockRunner:
+            mock_runner = MockRunner.return_value
+            mock_runner.create_run_dir.return_value = tmp_path / "runs" / "test-run"
+            mock_runner.run_scenario.return_value = MagicMock(success=True, error=None)
+
+            result = runner.invoke(app, ["run", "my-scenario"])
+
+        assert result.exit_code == 0
+        mock_runner.run_scenario.assert_called_once()
+
+    def test_run_parallel_flag(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """run command with --parallel uses parallel execution."""
+        monkeypatch.chdir(tmp_path)
+
+        # Create scenario
+        scenarios_dir = tmp_path / "scenarios"
+        scenario_dir = scenarios_dir / "test-scenario"
+        scenario_dir.mkdir(parents=True)
+        (scenario_dir / "prompt.txt").write_text("Do something")
+        (scenario_dir / "skill-sets.yaml").write_text(
+            yaml.dump({"sets": [{"name": "set1"}, {"name": "set2"}]})
+        )
+
+        with patch("skill_eval.runner.Runner") as MockRunner:
+            mock_runner = MockRunner.return_value
+            mock_runner.create_run_dir.return_value = tmp_path / "runs" / "test-run"
+            mock_runner.run_parallel.return_value = []
+
+            result = runner.invoke(app, ["run", "--all", "--parallel"])
+
+        assert result.exit_code == 0
+        mock_runner.run_parallel.assert_called_once()
+
+    def test_run_includes_prefixed_scenarios(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """run command includes _prefixed scenarios."""
+        monkeypatch.chdir(tmp_path)
+
+        scenarios_dir = tmp_path / "scenarios"
+        for name in ["regular", "_sensitive"]:
+            d = scenarios_dir / name
+            d.mkdir(parents=True)
+            (d / "prompt.txt").write_text("Do something")
+            (d / "skill-sets.yaml").write_text(yaml.dump({"sets": [{"name": "baseline"}]}))
+
+        with patch("skill_eval.runner.Runner") as MockRunner:
+            mock_runner = MockRunner.return_value
+            mock_runner.create_run_dir.return_value = tmp_path / "runs" / "test-run"
+            mock_runner.run_scenario.return_value = MagicMock(success=True, error=None)
+
+            result = runner.invoke(app, ["run", "--all"])
+
+        assert result.exit_code == 0
+        # Should have run both scenarios
+        assert mock_runner.run_scenario.call_count == 2
+
+
+class TestGradeCommand:
+    """Tests for the 'grade' command."""
+
+    def test_grade_manual_creates_grades_file(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """grade command without --auto creates grades.yaml template."""
+        monkeypatch.chdir(tmp_path)
+
+        # Create run directory structure
+        runs_dir = tmp_path / "runs"
+        run_dir = runs_dir / "2024-01-15-120000"
+        skill_set_dir = run_dir / "test-scenario" / "skill-set-1"
+        skill_set_dir.mkdir(parents=True)
+        (skill_set_dir / "output.md").write_text("Test output")
+
+        with patch("skill_eval.cli.is_interactive", return_value=False):
+            result = runner.invoke(app, ["grade"])
+
+        assert result.exit_code == 0
+        assert "Grades file:" in result.output
+        assert (run_dir / "grades.yaml").exists()
+
+    def test_grade_with_run_id(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """grade command with run_id uses that run."""
+        monkeypatch.chdir(tmp_path)
+
+        runs_dir = tmp_path / "runs"
+        for name in ["2024-01-01-100000", "2024-01-02-100000"]:
+            run_dir = runs_dir / name
+            skill_set_dir = run_dir / "test-scenario" / "skill-set-1"
+            skill_set_dir.mkdir(parents=True)
+            (skill_set_dir / "output.md").write_text("Output")
+
+        result = runner.invoke(app, ["grade", "01-01"])
+
+        assert result.exit_code == 0
+        assert "2024-01-01-100000" in result.output
+
+    def test_grade_latest_flag(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """grade --latest uses most recent run without prompting."""
+        monkeypatch.chdir(tmp_path)
+
+        runs_dir = tmp_path / "runs"
+        for name in ["2024-01-01-100000", "2024-01-02-100000"]:
+            run_dir = runs_dir / name
+            skill_set_dir = run_dir / "scenario" / "skill-set"
+            skill_set_dir.mkdir(parents=True)
+            (skill_set_dir / "output.md").write_text("Output")
+
+        result = runner.invoke(app, ["grade", "--latest"])
+
+        assert result.exit_code == 0
+        assert "2024-01-02-100000" in result.output
+
+    def test_grade_auto_calls_grader(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """grade --auto calls Claude grader for each output."""
+        monkeypatch.chdir(tmp_path)
+
+        # Create scenario
+        scenarios_dir = tmp_path / "scenarios"
+        scenario_dir = scenarios_dir / "test-scenario"
+        scenario_dir.mkdir(parents=True)
+        (scenario_dir / "scenario.md").write_text("# Test")
+        (scenario_dir / "prompt.txt").write_text("Do something")
+
+        # Create run output
+        runs_dir = tmp_path / "runs"
+        run_dir = runs_dir / "2024-01-15-120000"
+        skill_set_dir = run_dir / "test-scenario" / "skill-set-1"
+        skill_set_dir.mkdir(parents=True)
+        (skill_set_dir / "output.md").write_text("I did the thing")
+        (skill_set_dir / "metadata.yaml").write_text(
+            yaml.dump({"skills_available": ["skill-a"], "skills_invoked": ["skill-a"]})
+        )
+
+        with patch("skill_eval.grader.call_claude_grader") as mock_grader:
+            mock_grader.return_value = "success: true\nscore: 4\ntool_usage: appropriate\nnotes: Good"
+
+            with patch("skill_eval.cli.is_interactive", return_value=False):
+                result = runner.invoke(app, ["grade", "--auto"])
+
+        assert result.exit_code == 0
+        mock_grader.assert_called_once()
+        assert (run_dir / "grades.yaml").exists()
+
+    def test_grade_auto_computes_skill_usage(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """grade --auto computes skill usage from metadata."""
+        monkeypatch.chdir(tmp_path)
+
+        scenarios_dir = tmp_path / "scenarios"
+        scenario_dir = scenarios_dir / "test-scenario"
+        scenario_dir.mkdir(parents=True)
+        (scenario_dir / "scenario.md").write_text("# Test")
+        (scenario_dir / "prompt.txt").write_text("Do something")
+
+        runs_dir = tmp_path / "runs"
+        run_dir = runs_dir / "2024-01-15-120000"
+        skill_set_dir = run_dir / "test-scenario" / "skill-set-1"
+        skill_set_dir.mkdir(parents=True)
+        (skill_set_dir / "output.md").write_text("Done")
+        (skill_set_dir / "metadata.yaml").write_text(
+            yaml.dump({
+                "skills_available": ["skill-a", "skill-b"],
+                "skills_invoked": ["skill-a"],
+            })
+        )
+
+        with patch("skill_eval.grader.call_claude_grader") as mock_grader:
+            mock_grader.return_value = "success: true\nscore: 4"
+
+            with patch("skill_eval.cli.is_interactive", return_value=False):
+                result = runner.invoke(app, ["grade", "--auto"])
+
+        assert result.exit_code == 0
+
+        # Check grades.yaml has skill usage data
+        grades = yaml.safe_load((run_dir / "grades.yaml").read_text())
+        grade_data = grades["results"]["test-scenario"]["skill-set-1"]
+        assert grade_data["skills_available"] == ["skill-a", "skill-b"]
+        assert grade_data["skills_invoked"] == ["skill-a"]
+        assert grade_data["skill_usage_pct"] == 50.0
+
+
+class TestReportCommand:
+    """Tests for the 'report' command."""
+
+    def test_report_generates_output(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """report command generates report file."""
+        monkeypatch.chdir(tmp_path)
+
+        # Create run with grades
+        runs_dir = tmp_path / "runs"
+        run_dir = runs_dir / "2024-01-15-120000"
+        skill_set_dir = run_dir / "test-scenario" / "skill-set-1"
+        skill_set_dir.mkdir(parents=True)
+        (skill_set_dir / "output.md").write_text("Output")
+        (skill_set_dir / "metadata.yaml").write_text(yaml.dump({"tools_used": ["Read"]}))
+        (run_dir / "grades.yaml").write_text(
+            yaml.dump({
+                "graded_at": "2024-01-15",
+                "grader": "human",
+                "results": {
+                    "test-scenario": {
+                        "skill-set-1": {"success": True, "score": 4}
+                    }
+                },
+            })
+        )
+
+        with patch("skill_eval.cli.is_interactive", return_value=False):
+            result = runner.invoke(app, ["report"])
+
+        assert result.exit_code == 0
+        assert "Saved to:" in result.output
+
+        # Check reports directory was created
+        reports_dir = tmp_path / "reports"
+        assert reports_dir.exists()
+
+    def test_report_latest_flag(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """report --latest uses most recent run."""
+        monkeypatch.chdir(tmp_path)
+
+        runs_dir = tmp_path / "runs"
+        for name in ["2024-01-01-100000", "2024-01-02-100000"]:
+            run_dir = runs_dir / name
+            ss_dir = run_dir / "scenario" / "skill-set"
+            ss_dir.mkdir(parents=True)
+            (ss_dir / "output.md").write_text("Output")
+            (ss_dir / "metadata.yaml").write_text(yaml.dump({}))
+            (run_dir / "grades.yaml").write_text(
+                yaml.dump({"results": {"scenario": {"skill-set": {"success": True}}}})
+            )
+
+        result = runner.invoke(app, ["report", "--latest"])
+
+        assert result.exit_code == 0
+        assert "2024-01-02-100000" in result.output
+
+
+class TestReviewCommand:
+    """Tests for the 'review' command."""
+
+    def test_review_finds_transcripts(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """review command finds and reports transcript files."""
+        monkeypatch.chdir(tmp_path)
+
+        runs_dir = tmp_path / "runs"
+        run_dir = runs_dir / "2024-01-15-120000"
+        transcript_dir = run_dir / "test-scenario" / "skill-set-1" / "transcript"
+        transcript_dir.mkdir(parents=True)
+        (transcript_dir / "index.html").write_text("<html></html>")
+
+        with patch("skill_eval.cli.is_interactive", return_value=False):
+            with patch("webbrowser.open") as mock_open:
+                result = runner.invoke(app, ["review"])
+
+        assert result.exit_code == 0
+        assert "Opening 1 transcript" in result.output
+        mock_open.assert_called_once()
+
+    def test_review_no_transcripts_errors(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """review command errors when no transcripts found."""
+        monkeypatch.chdir(tmp_path)
+
+        runs_dir = tmp_path / "runs"
+        run_dir = runs_dir / "2024-01-15-120000"
+        run_dir.mkdir(parents=True)
+
+        with patch("skill_eval.cli.is_interactive", return_value=False):
+            result = runner.invoke(app, ["review"])
+
+        assert result.exit_code == 1
+        assert "No transcripts found" in result.output
+
+    def test_review_latest_flag(self, tmp_path: Path, monkeypatch: MagicMock) -> None:
+        """review --latest uses most recent run."""
+        monkeypatch.chdir(tmp_path)
+
+        runs_dir = tmp_path / "runs"
+        for name in ["2024-01-01-100000", "2024-01-02-100000"]:
+            run_dir = runs_dir / name
+            transcript_dir = run_dir / "scenario" / "skill-set" / "transcript"
+            transcript_dir.mkdir(parents=True)
+            (transcript_dir / "index.html").write_text("<html></html>")
+
+        with patch("webbrowser.open"):
+            result = runner.invoke(app, ["review", "--latest"])
+
+        assert result.exit_code == 0
+        assert "2024-01-02-100000" in result.output
+
+
+class TestVersionFlag:
+    """Tests for --version flag."""
+
+    def test_version_shows_version(self) -> None:
+        """--version shows the version number."""
+        result = runner.invoke(app, ["--version"])
+
+        assert result.exit_code == 0
+        assert "skill-eval" in result.output
