@@ -28,12 +28,13 @@ This skill includes detailed reference guides for specific techniques. Read the 
 
 | Guide | Use When |
 |-------|----------|
-| `planning-dbt-models.md` | Building new models - work backwards from desired output and use `dbt show` to validate results |
-| `discovering-data.md` | Exploring unfamiliar sources or onboarding to a project |
-| `writing-data-tests.md` | Adding tests - prioritize high-value tests over exhaustive coverage |
-| `debugging-dbt-errors.md` | Fixing project parsing, compilation, or database errors |
-| `evaluating-impact-of-a-dbt-model-change.md` | Assessing downstream effects before modifying models |
-| `writing-documentation.md` | Write documentation that doesn't just restate the column name |
+| [references/planning-dbt-models.md](references/planning-dbt-models.md) | Building new models - work backwards from desired output and use `dbt show` to validate results |
+| [references/discovering-data.md](references/discovering-data.md) | Exploring unfamiliar sources or onboarding to a project |
+| [references/writing-data-tests.md](references/writing-data-tests.md) | Adding tests - prioritize high-value tests over exhaustive coverage |
+| [references/debugging-dbt-errors.md](references/debugging-dbt-errors.md) | Fixing project parsing, compilation, or database errors |
+| [references/evaluating-impact-of-a-dbt-model-change.md](references/evaluating-impact-of-a-dbt-model-change.md) | Assessing downstream effects before modifying models |
+| [references/writing-documentation.md](references/writing-documentation.md) | Write documentation that doesn't just restate the column name |
+| [references/managing-packages.md](references/managing-packages.md) | Installing and managing dbt packages |
 
 ## DAG building guidelines
 
@@ -50,7 +51,7 @@ This skill includes detailed reference guides for specific techniques. Read the 
 - Follow dbt best practices in code:
   - Always use `{{ ref }}` and `{{ source }}` over hardcoded table names
   - Use CTEs over subqueries
-- Before building a model, follow `planning-dbt-models.md` to plan your approach.
+- Before building a model, follow [references/planning-dbt-models.md](references/planning-dbt-models.md) to plan your approach.
 - Before modifying or building on existing models, read their YAML documentation:
   - Find the model's YAML file (can be any `.yml` or `.yaml` file in the models directory, but normally colocated with the SQL file)
   - Check the model's `description` to understand its purpose
@@ -82,9 +83,9 @@ When implementing a model, you must use `dbt show` regularly to:
 
 | Mistake | Why It's Wrong | Fix |
 |---------|----------------|-----|
-| One-shotting models | Data work requires validation; schemas are unknown | Follow `planning-dbt-models.md`, iterate with `dbt show` |
+| One-shotting models | Data work requires validation; schemas are unknown | Follow [references/planning-dbt-models.md](references/planning-dbt-models.md), iterate with `dbt show` |
 | Not working iteratively | Changes to multiple models at once makes it hard to debug | Run `dbt build --select changed_model` on each model after modifying it |
-| Assuming schema knowledge | Column names, types, and values vary across warehouses | Follow `discovering-data.md` before writing SQL |
+| Assuming schema knowledge | Column names, types, and values vary across warehouses | Follow [references/discovering-data.md](references/discovering-data.md) before writing SQL |
 | Not reading existing model documentation | Column names don't reveal business meaning | Read YAML descriptions before modifying models |
 | Creating unnecessary models | Warehouse compute has real costs | Extend existing models when possible |
 | Hardcoding table names | Breaks dbt's dependency graph | Always use `{{ ref() }}` and `{{ source() }}` |

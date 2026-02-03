@@ -46,8 +46,8 @@ When you encounter unsupported features in Fusion, follow this decision tree:
 - **Materialized views/Dynamic tables**: Disable with `{{ config(enabled=false) }}` at the top of the file
 
 ### For Unsupported Config Keys
-- **Custom configs**: Move to `meta` block in model files (see /manual_fixes/custom_configuration.md)
-- **Deprecated configs**: Follow /manual_fixes/misspelled_config_keys.md guidance
+- **Custom configs**: Move to `meta` block in model files (see [references/custom_configuration.md](references/custom_configuration.md))
+- **Deprecated configs**: Follow [references/misspelled_config_keys.md](references/misspelled_config_keys.md) guidance
 
 ### For Dependency Issues
 - If a model depends on an unsupported feature, disable the dependent model as well
@@ -56,9 +56,17 @@ When you encounter unsupported features in Fusion, follow this decision tree:
 ## Resources
 
 ### Common problems that cannot be addressed with deterministic dbt-autofix
-Use the files in the `/manual_fixes/` directory as the context for resolving these common problems:
-- Each file outlines one problem and the solution you should use.
-- Only follow what's specified in the file. If you need more context, use the dbt docs section below as a resource.
+Use the files in the `references/` directory as the context for resolving these common problems. Each file outlines one problem and the solution you should use:
+
+- [references/README.md](references/README.md) - Overview of manual fixes
+- [references/custom_configuration.md](references/custom_configuration.md) - Custom config handling
+- [references/dynamic_sql.md](references/dynamic_sql.md) - Dynamic SQL patterns
+- [references/iceberg_tables.md](references/iceberg_tables.md) - Iceberg table support
+- [references/misspelled_config_keys.md](references/misspelled_config_keys.md) - Deprecated/misspelled configs
+- [references/package_incompatibility.md](references/package_incompatibility.md) - Package compatibility issues
+- [references/sources_without_tables.md](references/sources_without_tables.md) - Sources without tables
+
+Only follow what's specified in the file. If you need more context, use the dbt docs section below as a resource.
 
 Unsupported features and blockers to Fusion compatibility. These pages outline the supported and unsupported features of the Fusion engine: 
 - https://docs.getdbt.com/docs/fusion/supported-features

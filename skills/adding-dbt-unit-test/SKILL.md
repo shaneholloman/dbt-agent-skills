@@ -172,7 +172,7 @@ unit_tests:
           }
 ```
 
-For more examples of unit tests, see [examples.md](examples.md)
+For more examples of unit tests, see [references/examples.md](references/examples.md)
 
 ## Supported and unsupported scenarios
 
@@ -198,7 +198,7 @@ For more examples of unit tests, see [examples.md](examples.md)
 
 ## YAML for specifying unit tests
 
-- For all the required and optional keys in the YAML definition of unit tests, see [spec.md](spec.md)
+- For all the required and optional keys in the YAML definition of unit tests, see [references/spec.md](references/spec.md)
 
 # Inputs for unit tests
 
@@ -244,7 +244,7 @@ dbt supports three formats for mock data within unit tests:
 2. `csv`: Inline CSV values or a CSV file.
 3. `sql`: Inline SQL query or a SQL file.
 
-To see examples of each of the formats, see [examples.md](examples.md)
+To see examples of each of the formats, see [references/examples.md](references/examples.md)
 
 ## How to choose the `format`
 
@@ -267,22 +267,31 @@ When using the `dict` or `csv` format, you only have to define the mock data for
 
 ## Special cases
 
-- Unit testing incremental models. See `special_cases/incremental_model.md`.
-- Unit testing a model that depends on ephemeral model(s). See `special_cases/ephemeral_dependency.md`.
-- Unit test a model that depends on any introspective macros, project variables, or environment variables. See `special_cases/special_case_overrides.md`.
-- Unit testing versioned SQL models. See `special_cases/versioned_model.md`.
+- Unit testing incremental models. See [references/special-cases-incremental-model.md](references/special-cases-incremental-model.md).
+- Unit testing a model that depends on ephemeral model(s). See [references/special-cases-ephemeral-dependency.md](references/special-cases-ephemeral-dependency.md).
+- Unit test a model that depends on any introspective macros, project variables, or environment variables. See [references/special-cases-special-case-overrides.md](references/special-cases-special-case-overrides.md).
+- Unit testing versioned SQL models. See [references/special-cases-versioned-model.md](references/special-cases-versioned-model.md).
 
 ### Platform/adapter-specific caveats
 
-There are platform-specific details required if implementing on (Redshift, BigQuery, etc). Read the `warehouses/{platform_name}/caveats.md` file for the database you are on (if it exists).
+There are platform-specific details required if implementing on (Redshift, BigQuery, etc). Read the caveats file for your database (if it exists):
+
+- [references/warehouse-bigquery-caveats.md](references/warehouse-bigquery-caveats.md)
+- [references/warehouse-redshift-caveats.md](references/warehouse-redshift-caveats.md)
 
 # Platform/adapter-specific data types
 
-Unit tests are designed to test for the expected _values_, not for the data types themselves. dbt takes the value you provide and attempts to cast it to the data type as inferred from the input and output models. 
+Unit tests are designed to test for the expected _values_, not for the data types themselves. dbt takes the value you provide and attempts to cast it to the data type as inferred from the input and output models.
 
 How you specify input and expected values in your unit test YAML definitions are largely consistent across data warehouses, with some variation for more complex data types.
 
-Read the `warehouses/{platform_name}/data_types.md` file for the database you are on for examples.
+Read the data types file for your database:
+
+- [references/warehouse-bigquery-data-types.md](references/warehouse-bigquery-data-types.md)
+- [references/warehouse-postgres-data-types.md](references/warehouse-postgres-data-types.md)
+- [references/warehouse-redshift-data-types.md](references/warehouse-redshift-data-types.md)
+- [references/warehouse-snowflake-data-types.md](references/warehouse-snowflake-data-types.md)
+- [references/warehouse-spark-data-types.md](references/warehouse-spark-data-types.md)
 
 # Disabling a unit test
 
