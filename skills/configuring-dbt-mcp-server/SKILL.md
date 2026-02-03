@@ -91,6 +91,15 @@ flowchart TB
 
 ## How to Find Your Credentials
 
+### Which Token Type Should I Use?
+
+| Use Case | Token Type | Why |
+|----------|------------|-----|
+| Personal development setup | Personal Access Token (PAT) | Inherits your permissions, works with all APIs including execute_sql |
+| Shared team setup | Service Token | Multiple users, controlled permissions, separate from individual accounts |
+| Using execute_sql tool | PAT (required) | SQL tools that require `x-dbt-user-id` need a PAT |
+| CI/CD or automation | Service Token | System-level access, not tied to a person |
+
 ### Personal Access Token (PAT)
 
 1. Go to **Account Settings** → expand **API tokens** → click **Personal tokens**
@@ -242,7 +251,7 @@ DBT_PATH=/path/to/dbt
     "dbt": {
       "url": "https://cloud.getdbt.com/api/ai/v1/mcp/",
       "headers": {
-        "Authorization": "token your-token",
+        "Authorization": "Token your-token",
         "x-dbt-prod-environment-id": "your-prod-env-id"
       }
     }
@@ -254,7 +263,7 @@ DBT_PATH=/path/to/dbt
 ```json
 {
   "headers": {
-    "Authorization": "token your-token",
+    "Authorization": "Token your-token",
     "x-dbt-prod-environment-id": "your-prod-env-id",
     "x-dbt-dev-environment-id": "your-dev-env-id",
     "x-dbt-user-id": "your-user-id"
@@ -282,8 +291,25 @@ Run:
 ```bash
 claude mcp add dbt -s user -- uvx dbt-mcp
 ```
+This adds the server to your user scope/config (on this system: `~/.claude.json`).
 
-Or edit `~/.claude/settings.json` directly with the JSON config under `mcpServers`.
+For a project-specific setup, run:
+```bash
+claude mcp add dbt -s project -- uvx dbt-mcp
+```
+This adds the server to `.mcp.json` in your project root.
+
+Alternatively, you can use the manual configuration below.
+
+**Manual configuration:**
+Edit `~/.claude.json` (user scope) or create `.mcp.json` (project scope) in your project root:
+
+- `~/.claude.json`: Global across all projects
+- `.mcp.json`: Project-specific, committed to version control for team sharing
+
+For project-specific dbt setups, use `.mcp.json` so your team shares the same configuration.
+
+Once the config is created, make sure to add the JSON configuration under the `mcpServers` key.
 
 ### Cursor
 1. Open **Cursor menu** → **Settings** → **Cursor Settings** → **MCP**
@@ -321,21 +347,27 @@ Or edit `~/.claude/settings.json` directly with the JSON config under `mcpServer
 ## Verification Steps
 
 ### Test Local Server Config
+
+**Recommended: Use .env file**
+1. Create a .env file in your project root directory and add minimum environment variables for the CLI tools:
 ```bash
-# Set environment variables
+DBT_PROJECT_DIR=/path/to/project
+DBT_PATH=/path/to/dbt
+```
+2. Test the server:
+```bash
+uvx --env-file .env dbt-mcp
+```
+
+**Alternative: Environment variables**
+```bash
+# Temporary test (variables only last for this session)
 export DBT_PROJECT_DIR=/path/to/project
 export DBT_PATH=/path/to/dbt
-
-# Run the server
 uvx dbt-mcp
 ```
 
 No errors = successful configuration.
-
-### Test with .env File
-```bash
-uvx --env-file /path/to/.env dbt-mcp
-```
 
 ### Verify in Client
 After setup, ask the AI:
