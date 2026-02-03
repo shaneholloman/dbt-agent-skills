@@ -10,7 +10,9 @@ src/skill_eval/
 ├── models.py    # Data models: Scenario, SkillSet, load_scenario()
 ├── runner.py    # Execution: Runner class, RunResult, RunTask
 ├── grader.py    # Auto-grading with Claude CLI
-└── reporter.py  # Report generation from grades
+├── reporter.py  # Report generation from grades
+├── selector.py  # Interactive TUI selectors for runs/scenarios
+└── logging.py   # Loguru configuration with context support
 ```
 
 **Data flow:** `cli.py` loads scenarios via `models.py`, executes via `runner.py`, grades via `grader.py`, and reports via `reporter.py`.
@@ -19,18 +21,31 @@ src/skill_eval/
 
 We use [Typer](https://typer.tiangolo.com/) for the CLI.
 
-### Output with typer.echo()
+### Output
 
-Always use `typer.echo()` for user-facing output, never `print()`:
+Use the appropriate output method based on context:
 
+**User-facing CLI output** (command results, prompts): Use `typer.echo()`
 ```python
-# Good
-typer.echo(f"Running scenario: {name}")
+typer.echo(f"Run directory: {run_dir}")
 typer.echo("Error: file not found", err=True)
-
-# Bad
-print(f"Running scenario: {name}")
 ```
+
+**Progress logging** (during execution): Use `logger` from `logging.py`
+```python
+from skill_eval.logging import logger
+
+logger.info("Starting scenario")
+logger.debug("Tool called: Read")
+logger.warning("Timeout reached")
+logger.success("Completed")
+
+# With context (for parallel runs)
+ctx_logger = logger.bind(scenario="my-scenario", skill_set="with-skill")
+ctx_logger.info("Starting")  # Shows: [T0/my-scenario/with-skill] Starting
+```
+
+Never use `print()` for output.
 
 ### Adding Commands
 
@@ -157,6 +172,8 @@ Key dependencies in `pyproject.toml`:
 - `typer` - CLI framework
 - `pyyaml` - YAML parsing
 - `claude-code-transcripts` - HTML transcript generation
+- `loguru` - Logging with context support
+- `textual` - TUI for interactive selection
 
 Dev dependencies:
 - `pytest` - testing

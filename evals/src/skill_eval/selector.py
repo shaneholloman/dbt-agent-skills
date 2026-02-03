@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,21 +17,36 @@ from textual.widgets.option_list import Option
 class RunInfo:
     """Information about a run for display in selector.
 
-    Display format: '2026-01-30-120000 | 3 scenarios | graded'
+    Display format: '2026-01-30-120000 | 3 scenarios, 6 sets | graded'
+    With details: 'scenario1: set-a, set-b | scenario2: set-c'
     """
 
     path: Path
     name: str
     scenario_count: int
+    skill_set_count: int
+    scenarios_detail: dict[str, list[str]]  # scenario_name -> [skill_set_names]
     graded: bool
 
     @classmethod
     def from_path(cls, path: Path) -> RunInfo:
         """Create RunInfo from a run directory path."""
         name = path.name
-        scenario_count = sum(
-            1 for d in path.iterdir() if d.is_dir() and not d.name.startswith(".")
-        )
+        scenarios_detail: dict[str, list[str]] = {}
+
+        for scenario_dir in path.iterdir():
+            if not scenario_dir.is_dir() or scenario_dir.name.startswith("."):
+                continue
+            skill_sets = [
+                d.name
+                for d in scenario_dir.iterdir()
+                if d.is_dir() and not d.name.startswith(".")
+            ]
+            if skill_sets:
+                scenarios_detail[scenario_dir.name] = sorted(skill_sets)
+
+        scenario_count = len(scenarios_detail)
+        skill_set_count = sum(len(sets) for sets in scenarios_detail.values())
 
         grades_file = path / "grades.yaml"
         graded = grades_file.exists()
@@ -39,15 +55,36 @@ class RunInfo:
             path=path,
             name=name,
             scenario_count=scenario_count,
+            skill_set_count=skill_set_count,
+            scenarios_detail=scenarios_detail,
             graded=graded,
         )
 
-    def display_text(self) -> str:
-        """Format for display in selector."""
-        parts = [self.name, f"{self.scenario_count} scenario(s)"]
+    def display_text(self, max_width: int = 120) -> str:
+        """Format for display in selector.
+
+        Args:
+            max_width: Maximum width for the display line
+        """
+        # Build header: name | counts | graded
+        header_parts = [self.name, f"{self.scenario_count} scenarios, {self.skill_set_count} sets"]
         if self.graded:
-            parts.append("graded")
-        return " | ".join(parts)
+            header_parts.append("graded")
+        header = " | ".join(header_parts)
+
+        # Build scenario details
+        details_parts = []
+        for scenario_name in sorted(self.scenarios_detail.keys()):
+            sets = self.scenarios_detail[scenario_name]
+            details_parts.append(f"{scenario_name}: {', '.join(sets)}")
+        details = " | ".join(details_parts)
+
+        full_text = f"{header} | {details}" if details else header
+
+        # Truncate if needed
+        if len(full_text) > max_width:
+            return full_text[: max_width - 3] + "..."
+        return full_text
 
 
 @dataclass
@@ -127,12 +164,13 @@ class RunSelectorApp(App[Path | None]):
         self.runs = runs
         self.title_text = title
         self._selected: Path | None = None
+        self._term_width = shutil.get_terminal_size().columns
 
     def compose(self) -> ComposeResult:
         yield Header()
         yield Input(placeholder="Type to filter...", id="search")
         yield OptionList(
-            *[Option(run.display_text(), id=run.name) for run in self.runs],
+            *[Option(run.display_text(self._term_width), id=run.name) for run in self.runs],
             id="options",
         )
         yield Footer()
@@ -151,8 +189,8 @@ class RunSelectorApp(App[Path | None]):
         option_list.clear_options()
 
         for run in self.runs:
-            if query in run.display_text().lower():
-                option_list.add_option(Option(run.display_text(), id=run.name))
+            if query in run.display_text(self._term_width).lower():
+                option_list.add_option(Option(run.display_text(self._term_width), id=run.name))
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """When Enter is pressed in search, focus the list."""
@@ -261,8 +299,8 @@ class ScenarioSelectorApp(App[list[Path]]):
                 self._refresh_options()
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
-        """Toggle on Enter/click as well."""
-        self.action_toggle_selection()
+        """Confirm selection on Enter/double-click."""
+        self.action_confirm()
 
     async def action_quit(self) -> None:
         self.exit([])
@@ -271,6 +309,14 @@ class ScenarioSelectorApp(App[list[Path]]):
         self.query_one("#search", Input).focus()
 
     def action_confirm(self) -> None:
+        # If nothing selected, select the highlighted item
+        if not self._selected_names:
+            option_list = self.query_one("#options", OptionList)
+            if option_list.highlighted is not None:
+                idx = option_list.highlighted
+                if idx < len(self._filtered_scenarios):
+                    self._selected_names.add(self._filtered_scenarios[idx].name)
+
         selected_paths = [s.path for s in self.scenarios if s.name in self._selected_names]
         self.exit(selected_paths)
 

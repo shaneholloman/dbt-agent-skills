@@ -21,14 +21,17 @@ class TestRunInfo:
         """RunInfo.from_path creates info from a run directory."""
         run_dir = tmp_path / "2024-01-15-120000"
         run_dir.mkdir()
-        (run_dir / "scenario1").mkdir()
-        (run_dir / "scenario2").mkdir()
+        # Create scenarios with skill sets inside
+        (run_dir / "scenario1" / "set-a").mkdir(parents=True)
+        (run_dir / "scenario1" / "set-b").mkdir(parents=True)
+        (run_dir / "scenario2" / "set-a").mkdir(parents=True)
 
         info = RunInfo.from_path(run_dir)
 
         assert info.path == run_dir
         assert info.name == "2024-01-15-120000"
         assert info.scenario_count == 2
+        assert info.skill_set_count == 3
         assert info.graded is False
 
     def test_from_path_with_grades(self, tmp_path: Path) -> None:
@@ -46,24 +49,26 @@ class TestRunInfo:
         run_dir = tmp_path / "2024-01-15-120000"
         run_dir.mkdir()
         (run_dir / ".hidden").mkdir()
-        (run_dir / "scenario1").mkdir()
+        (run_dir / "scenario1" / "set-a").mkdir(parents=True)
 
         info = RunInfo.from_path(run_dir)
 
         assert info.scenario_count == 1
+        assert info.skill_set_count == 1
 
     def test_display_text_all_fields(self, tmp_path: Path) -> None:
         """display_text shows all available information."""
         run_dir = tmp_path / "2024-01-15-120000"
         run_dir.mkdir()
-        (run_dir / "scenario1").mkdir()
+        (run_dir / "scenario1" / "set-a").mkdir(parents=True)
         (run_dir / "grades.yaml").write_text("graded_at: 2024-01-15")
 
         info = RunInfo.from_path(run_dir)
         display = info.display_text()
 
         assert "2024-01-15-120000" in display
-        assert "1 scenario(s)" in display
+        assert "1 scenarios" in display
+        assert "1 sets" in display
         assert "graded" in display
 
     def test_display_text_minimal(self, tmp_path: Path) -> None:
@@ -75,9 +80,9 @@ class TestRunInfo:
         display = info.display_text()
 
         assert "2024-01-15-120000" in display
-        assert "0 scenario(s)" in display
+        assert "0 scenarios" in display
+        assert "0 sets" in display
         assert "graded" not in display
-        assert "$" not in display
 
 
 class TestScenarioInfo:

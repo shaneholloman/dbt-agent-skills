@@ -23,6 +23,9 @@ uv run skill-eval run <scenario-name> --parallel      # single scenario, paralle
 uv run skill-eval run --all --parallel                # all scenarios, all skill-sets in parallel
 uv run skill-eval run --all --parallel --workers 8    # custom worker count (default: 4)
 
+# Verbose mode (shows tool calls and skill invocations)
+uv run skill-eval run <scenario-name> --verbose       # or -v
+
 # Review transcripts in browser (opens HTML files)
 uv run skill-eval review              # latest run
 uv run skill-eval review <run-id>     # specific run
@@ -55,7 +58,7 @@ evals/
 │               ├── output.md       # Full conversation text
 │               ├── metadata.yaml   # Run metrics and tool usage
 │               ├── raw.jsonl       # Complete NDJSON stream
-│               ├── context/        # Modified files after run
+│               ├── changes/        # Files modified during the run
 │               └── transcript/     # HTML conversation viewer
 ├── reports/                # Generated comparison reports
 └── src/skill_eval/         # CLI source code
@@ -260,9 +263,9 @@ input_tokens: 125241
 output_tokens: 1177
 ```
 
-### context/
+### changes/
 
-The modified working directory after the run (excluding `.claude/`). Useful for verifying what changes Claude made to files.
+Files that were modified or created during the run. Only includes files that differ from the original context (excluding `.claude/`). Useful for verifying what changes Claude made.
 
 ### raw.jsonl
 
@@ -271,6 +274,15 @@ Complete NDJSON (newline-delimited JSON) stream from Claude for debugging.
 ### transcript/
 
 HTML files for viewing the conversation in a browser. Open `index.html` to view, with paginated content in `page-XXX.html` files. In VS Code, you can use the [Live Preview](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) extension to view these directly in the editor.
+
+## Timeouts and Stall Detection
+
+Each run has built-in safeguards:
+
+- **Total timeout**: 10 minutes maximum per skill-set run
+- **Stall detection**: Kills the run if no output for 60 seconds (e.g., waiting for permission approval)
+
+Stall detection helps catch runs that get stuck waiting for tool approval when using `allowed_tools` restrictions.
 
 ## Workflow
 
@@ -300,7 +312,7 @@ The grader receives:
 - Grading criteria (`scenario.md`)
 - Assistant's response (`output.md`)
 - Tools used, skills available/invoked, MCP servers (`metadata.yaml`)
-- Modified files (`context/`)
+- Modified files (`changes/`)
 
 Output grades include:
 - `success`: true/false

@@ -916,7 +916,7 @@ def test_run_scenario_appends_extra_prompt(tmp_path: Path) -> None:
 
     captured_prompt = None
 
-    def mock_run_claude(env_dir, prompt, mcp_config_path, allowed_tools):
+    def mock_run_claude(env_dir, prompt, mcp_config_path, allowed_tools, ctx_logger=None):
         nonlocal captured_prompt
         captured_prompt = prompt
         return {"output_text": "Done", "skills_invoked": [], "tools_used": []}, True, None, ""
@@ -956,7 +956,7 @@ def test_run_scenario_no_extra_prompt_unchanged(tmp_path: Path) -> None:
 
     captured_prompt = None
 
-    def mock_run_claude(env_dir, prompt, mcp_config_path, allowed_tools):
+    def mock_run_claude(env_dir, prompt, mcp_config_path, allowed_tools, ctx_logger=None):
         nonlocal captured_prompt
         captured_prompt = prompt
         return {"output_text": "Done", "skills_invoked": [], "tools_used": []}, True, None, ""
@@ -965,3 +965,112 @@ def test_run_scenario_no_extra_prompt_unchanged(tmp_path: Path) -> None:
         runner.run_scenario(scenario, skill_set, run_dir)
 
     assert captured_prompt == "Fix the bug"
+
+
+# Tests for run_claude timeout and stall detection
+
+import skill_eval.runner as runner_module
+
+
+def test_run_claude_normal_completion(tmp_path: Path) -> None:
+    """run_claude returns successfully when process completes normally."""
+    import io
+
+    evals_dir = tmp_path / "evals"
+    evals_dir.mkdir()
+    env_dir = tmp_path / "env"
+    env_dir.mkdir()
+    (env_dir / ".claude").mkdir()
+
+    runner = Runner(evals_dir=evals_dir)
+
+    # Mock Popen to simulate normal completion
+    mock_proc = MagicMock()
+    mock_proc.poll.side_effect = [None, None, 0]  # Running, running, done
+    mock_proc.returncode = 0
+    mock_proc.stdout = io.StringIO('{"type":"result","result":"done"}\n')
+    mock_proc.stderr = io.StringIO("")
+
+    with patch.object(runner_module.subprocess, "Popen", return_value=mock_proc):
+        with patch.object(runner_module.select, "select", return_value=([mock_proc.stdout], [], [])):
+            parsed, success, error, raw = runner.run_claude(
+                env_dir, "test prompt", timeout=10, stall_timeout=5
+            )
+
+    assert success is True
+    assert error is None
+
+
+def test_run_claude_total_timeout(tmp_path: Path) -> None:
+    """run_claude returns error when total timeout is exceeded."""
+    import io
+
+    evals_dir = tmp_path / "evals"
+    evals_dir.mkdir()
+    env_dir = tmp_path / "env"
+    env_dir.mkdir()
+    (env_dir / ".claude").mkdir()
+
+    runner = Runner(evals_dir=evals_dir)
+
+    # Mock Popen to simulate a process that never finishes
+    mock_proc = MagicMock()
+    mock_proc.poll.return_value = None  # Always running
+    mock_proc.stdout = io.StringIO('{"type":"init"}\n')
+    mock_proc.stderr = io.StringIO("")
+    mock_proc.kill = MagicMock()
+
+    call_count = 0
+
+    def mock_select(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        # Return data for first few calls, then empty (to let time pass)
+        if call_count <= 2:
+            return ([mock_proc.stdout], [], [])
+        return ([], [], [])
+
+    with patch.object(runner_module.subprocess, "Popen", return_value=mock_proc):
+        with patch.object(runner_module.select, "select", side_effect=mock_select):
+            # Use very short timeouts for testing
+            parsed, success, error, raw = runner.run_claude(
+                env_dir, "test prompt", timeout=1, stall_timeout=60
+            )
+
+    assert success is False
+    assert error is not None
+    assert "Timeout" in error
+    mock_proc.kill.assert_called_once()
+
+
+def test_run_claude_stall_timeout(tmp_path: Path) -> None:
+    """run_claude returns error when no output for stall_timeout seconds."""
+    import io
+
+    evals_dir = tmp_path / "evals"
+    evals_dir.mkdir()
+    env_dir = tmp_path / "env"
+    env_dir.mkdir()
+    (env_dir / ".claude").mkdir()
+
+    runner = Runner(evals_dir=evals_dir)
+
+    # Mock Popen to simulate a process that stops producing output
+    mock_proc = MagicMock()
+    mock_proc.poll.return_value = None  # Always running
+    mock_proc.stdout = io.StringIO("")  # No output
+    mock_proc.stderr = io.StringIO("")
+    mock_proc.kill = MagicMock()
+
+    with patch.object(runner_module.subprocess, "Popen", return_value=mock_proc):
+        # select always returns empty (no data available)
+        with patch.object(runner_module.select, "select", return_value=([], [], [])):
+            # Use very short timeouts for testing
+            parsed, success, error, raw = runner.run_claude(
+                env_dir, "test prompt", timeout=60, stall_timeout=1
+            )
+
+    assert success is False
+    assert error is not None
+    assert "Stalled" in error
+    mock_proc.kill.assert_called_once()

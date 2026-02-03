@@ -6,6 +6,7 @@ from typing import Optional
 import typer
 
 from skill_eval import __version__
+from skill_eval.logging import logger
 from skill_eval.selector import is_interactive, select_run, select_scenarios
 
 app = typer.Typer(help="A/B test skill variations against recorded scenarios.")
@@ -219,10 +220,15 @@ def run(
     all_scenarios: bool = typer.Option(False, "--all", help="Run all scenarios"),
     parallel: bool = typer.Option(False, "--parallel", "-p", help="Run tasks in parallel"),
     workers: int = typer.Option(4, "--workers", "-w", help="Number of parallel workers"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed progress (tool calls)"),
 ) -> None:
     """Run scenarios against skill variants."""
+    from skill_eval.logging import set_level
     from skill_eval.models import load_scenario
     from skill_eval.runner import Runner, RunTask
+
+    if verbose:
+        set_level("DEBUG")
 
     evals_dir = Path.cwd()
     scenarios_dir = evals_dir / "scenarios"
@@ -261,25 +267,25 @@ def run(
             else:
                 failed += 1
                 icon = "✗"
-            typer.echo(f"  [{completed}/{total}] {task.scenario.name}/{task.skill_set.name} {icon}")
+            logger.info(f"[{completed}/{total}] {task.scenario.name}/{task.skill_set.name} {icon}")
 
         runner.run_parallel(tasks, max_workers=workers, progress_callback=on_complete)
 
-        typer.echo(f"\nRun complete: {passed} passed, {failed} failed")
+        logger.success(f"Run complete: {passed} passed, {failed} failed")
     else:
         # Sequential execution (original behavior)
         for scenario_obj in loaded_scenarios:
-            typer.echo(f"\nScenario: {scenario_obj.name}")
+            logger.info(f"Scenario: {scenario_obj.name}")
 
             for skill_set in scenario_obj.skill_sets:
-                typer.echo(f"  Running: {skill_set.name}...", nl=False)
+                logger.info(f"  Starting: {skill_set.name}")
                 result = runner.run_scenario(scenario_obj, skill_set, run_dir)
                 if result.success:
-                    typer.echo(" done")
+                    logger.success(f"  Completed: {skill_set.name}")
                 else:
-                    typer.echo(f" FAILED: {result.error}")
+                    logger.error(f"  Failed: {skill_set.name} - {result.error}")
 
-        typer.echo(f"\nRun complete: {run_dir}")
+        logger.success(f"Run complete: {run_dir}")
 
     typer.echo(f"Next: uv run skill-eval grade {run_dir.name}")
 

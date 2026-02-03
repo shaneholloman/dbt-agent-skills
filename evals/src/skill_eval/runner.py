@@ -3,10 +3,14 @@
 import filecmp
 import json
 import os
+import select
 import shutil
 import subprocess
 import tempfile
+import time
 import urllib.request
+
+from skill_eval.logging import logger
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -202,9 +206,13 @@ class Runner:
             shutil.copy(src, dest)
 
     def _generate_transcript(
-        self, env_dir: Path, output_dir: Path, scenario_name: str, skill_set_name: str
+        self, env_dir: Path, output_dir: Path, scenario_name: str, skill_set_name: str, log=None
     ) -> None:
         """Generate HTML transcript from Claude's native session file."""
+        import contextlib
+        import io
+
+        log = log or logger
         claude_projects = env_dir / ".claude" / "projects"
         if not claude_projects.exists():
             return
@@ -218,7 +226,20 @@ class Runner:
 
         try:
             transcript_dir = output_dir / "transcript"
-            generate_html(session_file, transcript_dir)
+
+            # Capture stdout/stderr from the library
+            stdout_capture = io.StringIO()
+            stderr_capture = io.StringIO()
+            with contextlib.redirect_stdout(stdout_capture), contextlib.redirect_stderr(stderr_capture):
+                generate_html(session_file, transcript_dir)
+
+            # Log any captured output at debug level
+            for line in stdout_capture.getvalue().strip().split("\n"):
+                if line:
+                    log.debug(f"transcript: {line}")
+            for line in stderr_capture.getvalue().strip().split("\n"):
+                if line:
+                    log.debug(f"transcript: {line}")
 
             # Update HTML titles to include scenario and skill set info
             custom_title = f"{scenario_name} / {skill_set_name}"
@@ -237,7 +258,7 @@ class Runner:
                 )
                 html_file.write_text(content)
         except Exception as e:
-            print(f"Warning: transcript generation failed: {e}")
+            log.warning(f"Transcript generation failed: {e}")
 
     def create_run_dir(self) -> Path:
         """Create a timestamped directory for this run."""
@@ -372,17 +393,85 @@ class Runner:
 
         return result
 
+    def _read_output_line(
+        self, proc: subprocess.Popen, timeout: float = 1.0
+    ) -> str | None:
+        """Read a single line from process stdout if available."""
+        if not proc.stdout:
+            return None
+        ready, _, _ = select.select([proc.stdout], [], [], timeout)
+        if not ready:
+            return None
+        return proc.stdout.readline() or None
+
+    def _log_progress(self, line: str, elapsed: float, log=None) -> None:
+        """Log progress from a JSON line (tool calls, etc.)."""
+        log = log or logger
+        try:
+            msg = json.loads(line)
+        except json.JSONDecodeError:
+            return
+
+        if msg.get("type") != "assistant":
+            return
+
+        for content in msg.get("message", {}).get("content", []):
+            if not isinstance(content, dict):
+                continue
+            if content.get("type") != "tool_use":
+                continue
+
+            tool_name = content.get("name", "unknown")
+            elapsed_min = int(elapsed // 60)
+            elapsed_sec = int(elapsed % 60)
+
+            # Show skill name when Skill tool is invoked
+            if tool_name == "Skill":
+                skill_name = content.get("input", {}).get("skill", "unknown")
+                log.debug(f"[{elapsed_min}:{elapsed_sec:02d}] skill: {skill_name}")
+            else:
+                log.debug(f"[{elapsed_min}:{elapsed_sec:02d}] tool: {tool_name}")
+
+    def _drain_remaining_output(
+        self,
+        proc: subprocess.Popen,
+        stdout_lines: list[str],
+        stderr_lines: list[str],
+    ) -> None:
+        """Read any remaining output from process after it finishes."""
+        if proc.stdout:
+            remaining = proc.stdout.read()
+            if remaining:
+                stdout_lines.append(remaining)
+        if proc.stderr:
+            remaining = proc.stderr.read()
+            if remaining:
+                stderr_lines.append(remaining)
+
     def run_claude(
         self,
         env_dir: Path,
         prompt: str,
         mcp_config_path: Path | None = None,
         allowed_tools: list[str] | None = None,
+        timeout: int = 600,
+        stall_timeout: int = 60,
+        ctx_logger=None,
     ) -> tuple[dict, bool, str | None, str]:
         """Run Claude Code with isolated config and capture output.
 
+        Args:
+            env_dir: Directory to run Claude in
+            prompt: The prompt to send
+            mcp_config_path: Optional path to MCP config
+            allowed_tools: Optional list of allowed tools
+            timeout: Maximum total runtime in seconds (default: 600 = 10 min)
+            stall_timeout: Kill if no output for this many seconds (default: 60)
+            ctx_logger: Optional logger with bound context (scenario, skill_set)
+
         Returns: (parsed_output, success, error, raw_json)
         """
+        log = ctx_logger or logger
         env = os.environ.copy()
         env["CLAUDE_CONFIG_DIR"] = str(env_dir / ".claude")
 
@@ -408,33 +497,64 @@ class Runner:
         cmd.extend(["-p", prompt])
 
         try:
-            result = subprocess.run(
+            proc = subprocess.Popen(
                 cmd,
                 cwd=env_dir,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=300,
                 env=env,
             )
 
-            # Parse JSON output (save raw for debugging)
-            raw_json = result.stdout
-            parsed = self._parse_json_output(raw_json)
+            stdout_lines: list[str] = []
+            stderr_lines: list[str] = []
+            start_time = time.time()
+            last_output_time = start_time
+            error_msg = None
 
-            # Include stderr if there's an error
-            if result.stderr:
-                parsed["output_text"] += f"\n\n[stderr]\n{result.stderr}"
+            # Read output with stall detection
+            while proc.poll() is None:
+                elapsed = time.time() - start_time
+                stall_duration = time.time() - last_output_time
 
-            return parsed, result.returncode == 0, None, raw_json
-        except subprocess.TimeoutExpired as e:
-            # Capture partial output on timeout (stdout/stderr are bytes)
-            raw_json = e.stdout.decode("utf-8") if e.stdout else ""
-            stderr = e.stderr.decode("utf-8") if e.stderr else ""
+                # Check total timeout
+                if elapsed > timeout:
+                    proc.kill()
+                    error_msg = f"Timeout after {timeout // 60} minutes"
+                    log.warning(error_msg)
+                    break
+
+                # Check stall timeout
+                if stall_duration > stall_timeout:
+                    proc.kill()
+                    error_msg = f"Stalled for {stall_timeout}s (possibly waiting for approval)"
+                    log.warning(error_msg)
+                    break
+
+                # Check for available output
+                line = self._read_output_line(proc, timeout=1.0)
+                if not line:
+                    continue
+
+                stdout_lines.append(line)
+                last_output_time = time.time()
+                self._log_progress(line, elapsed, log)
+
+            # Read any remaining output
+            self._drain_remaining_output(proc, stdout_lines, stderr_lines)
+
+            raw_json = "".join(stdout_lines)
+            stderr = "".join(stderr_lines)
             parsed = self._parse_json_output(raw_json) if raw_json else {}
+
             if stderr:
                 parsed["output_text"] = parsed.get("output_text", "") + f"\n\n[stderr]\n{stderr}"
-            error_msg = "Timeout after 5 minutes (possibly waiting for tool approval?)"
-            return parsed, False, error_msg, raw_json
+
+            if error_msg:
+                return parsed, False, error_msg, raw_json
+
+            return parsed, proc.returncode == 0, None, raw_json
+
         except Exception as e:
             return {}, False, str(e), ""
 
@@ -445,6 +565,10 @@ class Runner:
         run_dir: Path,
     ) -> RunResult:
         """Run a single scenario with a skill set."""
+        # Bind context for logging
+        ctx_logger = logger.bind(scenario=scenario.name, skill_set=skill_set.name)
+        ctx_logger.info("Starting")
+
         env_dir, mcp_config_path = self.prepare_environment(
             scenario_dir=scenario.path,
             context_dir=scenario.context_dir,
@@ -462,6 +586,7 @@ class Runner:
             prompt,
             mcp_config_path,
             skill_set.allowed_tools if skill_set.allowed_tools else None,
+            ctx_logger=ctx_logger,
         )
 
         output_dir = run_dir / scenario.name / skill_set.name
@@ -503,7 +628,7 @@ class Runner:
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dest)
 
-        self._generate_transcript(env_dir, output_dir, scenario.name, skill_set.name)
+        self._generate_transcript(env_dir, output_dir, scenario.name, skill_set.name, ctx_logger)
         shutil.rmtree(env_dir, ignore_errors=True)
 
         return RunResult(
