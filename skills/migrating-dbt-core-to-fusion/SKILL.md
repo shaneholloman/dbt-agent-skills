@@ -42,8 +42,8 @@ Before you begin, please read and understand the resources section below. Only a
 When you encounter unsupported features in Fusion, follow this decision tree:
 
 ### For Unsupported Model Types (Python models, etc.)
-- **Python models**: Disable with `{{ config(enabled=false) }}` at the top of the file
-- **Materialized views/Dynamic tables**: Disable with `{{ config(enabled=false) }}` at the top of the file
+- **Python models**: Python models are supported, but you need to first disable static analysis with `{{ config(static_analysis=off) }}` at the top of the file
+- **Materialized views/Dynamic tables**: We support some of these, but if you get an error, you can disable with `{{ config(enabled=false) }}` at the top of the file
 
 ### For Unsupported Config Keys
 - **Custom configs**: Move to `meta` block in model files (see [references/custom_configuration.md](references/custom_configuration.md))
