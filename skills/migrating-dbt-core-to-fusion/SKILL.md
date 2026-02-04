@@ -61,7 +61,6 @@ Use the files in the `references/` directory as the context for resolving these 
 - [references/README.md](references/README.md) - Overview of manual fixes
 - [references/custom_configuration.md](references/custom_configuration.md) - Custom config handling
 - [references/dynamic_sql.md](references/dynamic_sql.md) - Dynamic SQL patterns
-- [references/iceberg_tables.md](references/iceberg_tables.md) - Iceberg table support
 - [references/misspelled_config_keys.md](references/misspelled_config_keys.md) - Deprecated/misspelled configs
 - [references/package_incompatibility.md](references/package_incompatibility.md) - Package compatibility issues
 - [references/sources_without_tables.md](references/sources_without_tables.md) - Sources without tables
