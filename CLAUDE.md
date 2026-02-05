@@ -65,7 +65,7 @@ description: Brief one-sentence description starting with "Use when..."
 - `name` MUST be lowercase with hyphens only (letters, digits, hyphens)
 - `name` MUST match the directory name exactly
 - Only allowed fields: `name`, `description`, `allowed-tools`, `compatibility`, `license`, `metadata`
-- NO `version`, `author`, or `tags` fields (these will cause validation errors)
+- NO `version`, `author`, or `tags` fields (these will cause validation errors if not put inside `metadata:`
 
 ## Common Validation Errors
 
