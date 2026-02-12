@@ -56,12 +56,12 @@ Every metric needs: `name`, `description`, `label`, and `type`
 dbt parse
 
 # List available dimensions for a metric
-dbt sl list dimensions --metrics <metric_name>   # dbt Cloud CLI
+dbt sl list dimensions --metrics <metric_name>   # dbt Cloud CLI / Fusion CLI when using the dbt platform
 mf list dimensions --metrics <metric_name>       # MetricFlow CLI
 
 # Test metric queries
-dbt sl query --metrics <metric_name> --group-by <dimension>   # dbt Cloud CLI
-mf query --metrics <metric_name> --group-by <dimension>       # MetricFlow CLI
+dbt sl query --metrics <metric_name> --group-by <dimension>
+mf query --metrics <metric_name> --group-by <dimension>
 ```
 
 ## What to Avoid

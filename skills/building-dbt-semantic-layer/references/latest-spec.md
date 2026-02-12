@@ -4,6 +4,16 @@ This is the authoring guide for the **latest** dbt Semantic Layer YAML spec, sup
 
 In the latest spec, semantic models are configured as metadata annotations on your dbt models rather than as separate top-level resources. Measures are replaced by simple metrics defined directly within models.
 
+## Contents
+
+- Implementation Workflow (Steps 1-4: enable semantic model, entities, dimensions, metrics)
+- YAML Format Reference (derived semantics, simple metric options, advanced metrics)
+- Advanced Metrics (derived, cumulative, ratio, conversion)
+- Cross-Model (Top-Level) Metrics
+- SCD Type II Dimensions
+- Key Formatting Rules
+- Common Pitfalls
+
 ## Implementation Workflow
 
 ### Step 1: Enable Semantic Model

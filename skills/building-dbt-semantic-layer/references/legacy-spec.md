@@ -4,6 +4,15 @@ This is the authoring guide for the **legacy** dbt Semantic Layer YAML spec, sup
 
 In the legacy spec, semantic models are defined as top-level resources separate from dbt model definitions. Measures are a core concept used as building blocks for metrics.
 
+## Contents
+
+- Implementation Workflow (Steps 1-4: semantic model, entities, dimensions, measures/metrics)
+- YAML Format Reference (complete spec, measure properties, percentile, non-additive dimensions)
+- Metrics (simple, derived, cumulative, ratio, conversion)
+- SCD Type II Dimensions
+- Key Formatting Rules
+- Common Pitfalls
+
 ## Implementation Workflow
 
 ### Step 1: Define Semantic Model

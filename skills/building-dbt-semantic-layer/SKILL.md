@@ -1,6 +1,6 @@
 ---
 name: building-dbt-semantic-layer
-description: Use when creating or modifying dbt Semantic Layer components including semantic models, metrics, and dimensions leveraging MetricFlow.
+description: Use when creating or modifying dbt Semantic Layer components — semantic models, metrics, dimensions, entities, measures, or time spines. Covers MetricFlow configuration, metric types (simple, derived, cumulative, ratio, conversion), and validation for both latest and legacy YAML specs.
 user-invocable: false
 metadata:
   author: dbt-labs
@@ -19,6 +19,8 @@ This skill guides the creation and modification of dbt Semantic Layer components
 
 - [Time Spine Setup](references/time-spine.md) - Required for time-based metrics and aggregations
 - [Best Practices](references/best-practices.md) - Design patterns and recommendations for semantic models and metrics
+- [Latest Spec Authoring Guide](references/latest-spec.md) - Full YAML reference for dbt Core 1.12+ and Fusion
+- [Legacy Spec Authoring Guide](references/legacy-spec.md) - Full YAML reference for dbt Core 1.6-1.11
 
 ## Determine Which Spec to Use
 
@@ -133,15 +135,20 @@ filter: |
   {{ Metric('metric_name', group_by=['entity_name']) }} > 100
 ```
 
+**Important**: Filter expressions can only reference columns that are declared as dimensions or entities in the semantic model. Raw table columns that aren't defined as dimensions cannot be used in filters — even if they appear in a measure's `expr`.
+
 ## Validation
 
 After writing YAML, validate in two stages:
 
-1. **Parse Validation**: Run `dbt parse` to confirm YAML syntax and references
+1. **Parse Validation**: Run `dbt parse` (or `dbtf parse` for Fusion) to confirm YAML syntax and references
 2. **Semantic Layer Validation**:
-   - `dbt sl validate` (dbt Cloud CLI)
+   - `dbt sl validate` (dbt Cloud CLI or Fusion CLI when using the dbt platform)
    - `mf validate-configs` (MetricFlow CLI)
 
+**Important**: `mf validate-configs` reads from the compiled manifest, not directly from YAML files. If you've edited YAML since the last parse, you must run `dbt parse` (or `dbtf parse`) again before `mf validate-configs` will see the changes.
+
+**Note**: When using Fusion with MetricFlow locally (without the dbt platform), `dbtf parse` will show `warning: dbt1005: Skipping semantic manifest validation due to: No dbt_cloud.yml config`. This is expected — use `mf validate-configs` for semantic layer validation in this setup.
 
 Do not consider work complete until both validations pass.
 
@@ -161,3 +168,6 @@ When modifying existing semantic layer config:
 | Missing time dimension | Every semantic model with metrics/measures needs a default time dimension |
 | Using `window` and `grain_to_date` together | Cumulative metrics can only have one |
 | Mixing spec syntax | Don't use `type_params` in latest spec or direct keys in legacy spec |
+| Filtering on non-dimension columns | Filter expressions can only use declared dimensions/entities, not raw columns |
+| `mf validate-configs` shows stale results | Re-run `dbt parse` / `dbtf parse` first to regenerate the manifest |
+| MetricFlow install breaks `dbt-semantic-interfaces` | Install `dbt-metricflow` (not bare `metricflow`) to get compatible dependency versions |
