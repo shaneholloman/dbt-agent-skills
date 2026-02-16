@@ -1,6 +1,6 @@
 ---
 name: migrating-dbt-project-across-platforms
-description: Use when migrating a dbt project from one data platform to another (e.g., Snowflake to Databricks, Databricks to Snowflake) using dbt Fusion's real-time compilation to identify and fix SQL dialect differences.
+description: Use when migrating a dbt project from one data platform or data warehouse to another (e.g., Snowflake to Databricks, Databricks to Snowflake) using dbt Fusion's real-time compilation to identify and fix SQL dialect differences.
 metadata:
   author: dbt-labs
 ---
@@ -17,6 +17,13 @@ This skill guides migration of a dbt project from one data platform (source) to 
 3. All models run successfully on the target platform (`dbtf run`)
 
 **Validation cost**: Use `dbtf compile` as the primary iteration gate — it's free (no warehouse queries) and catches both errors and warnings from static analysis. Only `dbtf run` and `dbt test` incur warehouse cost; run those only after compile is clean.
+
+## Contents
+
+- [Additional Resources](#additional-resources) — Reference docs for installation, unit tests, profiles
+- [Migration Workflow](#migration-workflow) — 7-step migration process with progress checklist
+- [Don't Do These Things](#dont-do-these-things) — Critical guardrails
+- [Known Limitations & Gotchas](#known-limitations--gotchas) — Fusion-specific and cross-platform caveats
 
 ## Additional Resources
 
@@ -47,13 +54,13 @@ When a user asks to migrate their dbt project to a different data platform, foll
 
 #### Step 1: Verify dbt Fusion is installed
 
-Check that `dbtf` is available and working. Fusion is **required** — it provides the real-time compilation and rich error diagnostics that power this migration.
+Fusion is **required** — it provides the real-time compilation and rich error diagnostics that power this migration. Fusion may be available as `dbtf` or as `dbt`.
 
-```bash
-dbtf --version
-```
+To detect which command to use:
+1. Check if `dbtf` is available — if it exists, it's Fusion
+2. If `dbtf` is not found, run `dbt --version` — if the output starts with `dbt-fusion`, then `dbt` is Fusion
 
-If `dbtf` is not installed or not working, guide the user through installation. See [references/installing-dbt-fusion.md](references/installing-dbt-fusion.md) for details.
+Use whichever command is Fusion everywhere this skill references `dbtf`. If neither provides Fusion, guide the user through installation. See [references/installing-dbt-fusion.md](references/installing-dbt-fusion.md) for details.
 
 #### Step 2: Assess the source project
 
@@ -141,12 +148,7 @@ Iterate until all unit tests pass.
 
 #### Step 7: Final validation and documentation
 
-If you already ran `dbtf run` (to materialize models for unit testing) and all unit tests passed, the migration is proven — don't repeat work with a redundant `dbtf build`. The migration is complete when:
-- `dbtf compile` has 0 errors and 0 actionable warnings
-- All unit tests pass (`dbt test --select test_type:unit`)
-- All models run successfully (`dbtf run`)
-
-If you haven't yet materialized models, run `dbtf build` to do everything in one step.
+If you already ran `dbtf run` (to materialize models for unit testing) and all unit tests passed, the migration is proven — don't repeat work with a redundant `dbtf build`. If you haven't yet materialized models, run `dbtf build` to do everything in one step. Verify all three success criteria (defined above) are met.
 
 Document all changes in `migration_changes.md` using the template below. Summarize the migration for the user, including:
 - Total number of files changed
@@ -214,4 +216,4 @@ Use this structure when documenting migration changes:
 
 ### Cross-platform data differences
 - **Sample datasets may differ between platforms.** Even "standard" datasets like TPCH can have minor schema or data differences across platforms (e.g., column names, data types, row counts). When using sample data for migration testing, verify the source data schema on both platforms before assuming 1:1 equivalence.
-- **Platform-specific config keys are not errors until Fusion flags them.** Keys like `+snowflake_warehouse` or `cluster_by` won't cause Fusion compile errors on the source platform — they'll only surface when compiling against the target. Don't pre-remove them.
+- **Platform-specific config keys are not errors until Fusion flags them.** Keys like `snowflake_warehouse` or `cluster_by` won't cause Fusion compile errors on the source platform — they'll only surface when compiling against the target. Don't pre-remove them.
